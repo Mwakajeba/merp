@@ -54,7 +54,8 @@ return [
     'phone_not_found' => 'Phone number not found.',
     'invalid_password' => 'Invalid password.',
     'password_reset_success' => 'Password reset successfully. You can now login.',
-    'session_expired' => 'Session expired. Please try again.',
+    'session_expired' => 'Your session has expired. Please sign in again.',
+    'session_expired_title' => 'Session Expired',
     'invalid_verification_code' => 'Invalid verification code.',
     'phone_verified_success' => 'Phone verified successfully!',
     'login_by_pin' => 'Login by PIN',
@@ -70,6 +71,7 @@ return [
     'confirm_new_pin' => 'Confirm New PIN',
     'reset_pin' => 'Reset PIN',
     'pin_reset_success' => 'PIN reset successfully.',
+    'pin_change_success' => 'PIN changed successfully.',
     'user_pin_created' => 'User :name created. Login PIN: :pin',
 
     // Navigation

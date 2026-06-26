@@ -68,6 +68,9 @@ class SalesInvoiceController extends Controller
                 ->when(auth()->user()->branch_id, function($query) {
                     return $query->where('branch_id', auth()->user()->branch_id);
                 })
+                ->when(!auth()->user()->can('view all sales invoices'), function ($query) {
+                    $query->where('created_by', auth()->id());
+                })
                 ->select(['id', 'invoice_number', 'reference_no', 'customer_id', 'invoice_date', 'due_date', 'status', 'total_amount', 'paid_amount', 'balance_due', 'currency', 'branch_id', 'created_by', 'created_at']);
 
             return datatables($invoices)

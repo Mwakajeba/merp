@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\User;
 use App\Models\Branch;
 use App\Models\Company;
+use App\Models\InventoryLocation;
 use App\Models\Role;
 use App\Rules\PasswordValidation;
 use App\Services\PasswordService;
@@ -123,7 +124,11 @@ class UserController extends Controller
             ->orderBy('name')
             ->get();
 
-        return view('users.create', compact('roles'));
+        $branches = Branch::where('company_id', current_company_id())
+            ->orderBy('name')
+            ->get(['id', 'name']);
+
+        return view('users.create', compact('roles', 'branches'));
     }
 
     public function store(Request $request)
@@ -145,6 +150,8 @@ class UserController extends Controller
                 'phone' => 'required|string|max:20|unique:users,phone,NULL,id,company_id,' . current_company_id(),
                 'role_id' => 'required|exists:roles,id',
                 'status' => 'required|in:active,inactive',
+                'branch_id' => 'required|exists:branches,id',
+                'location_id' => 'required|exists:inventory_locations,id',
             ];
 
             $validator = \Validator::make($request->all(), $rules);
@@ -163,13 +170,33 @@ class UserController extends Controller
 
             \Log::info('User creation validation passed');
 
+            $companyId = current_company_id();
+            $branch = Branch::where('company_id', $companyId)->find($request->branch_id);
+            if (!$branch) {
+                DB::rollBack();
+                return redirect()->back()
+                    ->withErrors(['branch_id' => 'Selected branch is not valid for this company.'])
+                    ->withInput($request->except(['password', 'password_confirmation']));
+            }
+
+            $location = InventoryLocation::where('company_id', $companyId)
+                ->where('branch_id', $branch->id)
+                ->find($request->location_id);
+            if (!$location) {
+                DB::rollBack();
+                return redirect()->back()
+                    ->withErrors(['location_id' => 'Selected location does not belong to the chosen branch.'])
+                    ->withInput($request->except(['password', 'password_confirmation']));
+            }
+
             // Create user directly
             $user = User::create([
                     'name' => $request->name,
                     'phone' => $this->formatPhoneNumber($request->phone),
                     'email' => $request->filled('email') ? $request->email : null,
                     'password' => Hash::make('12345'),
-                    'company_id' => current_company_id(),
+                    'company_id' => $companyId,
+                    'branch_id' => $branch->id,
                     'status' => $request->status,
                     'is_active' => $request->status === 'active' ? 'yes' : 'no',
                 ]);
@@ -192,6 +219,11 @@ class UserController extends Controller
 
             // Assign role to user
             $user->assignRole($role);
+
+            $user->branches()->sync([$branch->id]);
+            $user->locations()->sync([
+                $location->id => ['is_default' => true],
+            ]);
 
             $pinService = app(PinService::class);
             $generatedPin = $pinService->generateUniquePin(current_company_id());
@@ -451,6 +483,60 @@ class UserController extends Controller
         }
 
         return redirect()->route('users.profile')->with('success', 'Profile updated successfully!');
+    }
+
+    public function changePin(Request $request)
+    {
+        $user = auth()->user();
+
+        $rules = [
+            'new_pin' => 'required|digits:4|confirmed',
+        ];
+
+        if ($user->getPlainPin()) {
+            $rules['current_pin'] = 'required|digits:4';
+        }
+
+        $validated = $request->validate($rules);
+
+        if ($user->getPlainPin() && !$user->verifyPin($validated['current_pin'] ?? '')) {
+            $message = __('app.invalid_current_pin');
+
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $message,
+                    'errors' => ['current_pin' => [$message]],
+                ], 422);
+            }
+
+            return back()->withErrors(['current_pin' => $message]);
+        }
+
+        try {
+            app(PinService::class)->setPin($user, $validated['new_pin']);
+        } catch (\InvalidArgumentException $e) {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $e->getMessage(),
+                    'errors' => ['new_pin' => [$e->getMessage()]],
+                ], 422);
+            }
+
+            return back()->withErrors(['new_pin' => $e->getMessage()]);
+        }
+
+        $message = __('app.pin_change_success');
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => $message,
+            ]);
+        }
+
+        return redirect()->route('users.profile')->with('success', $message);
     }
 
     public function changeStatus(User $user)

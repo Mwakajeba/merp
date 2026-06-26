@@ -119,6 +119,13 @@
         
         // Fix DataTables column count issues globally
         $(document).ready(function() {
+            $.ajaxSetup({
+                headers: {
+                    'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content'),
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+            });
+
             // Override DataTables initialization to handle column count errors
             $.fn.dataTable.ext.errMode = 'throw';
             
@@ -128,10 +135,102 @@
                     console.warn('DataTables column count warning suppressed for table:', settings.nTable.id);
                     return false; // Prevent the error from being thrown
                 }
+
+                const xhr = settings.jqXHR;
+                if (xhr && window.SmartPosSession && window.SmartPosSession.isExpired(xhr)) {
+                    window.SmartPosSession.handleExpired();
+                    return false;
+                }
             });
+
+            window.SmartPosSession = (function () {
+                let redirecting = false;
+
+                function isExpired(xhr) {
+                    if (!xhr) return false;
+                    if (xhr.status === 401 || xhr.status === 419) return true;
+
+                    const body = xhr.responseText || '';
+                    const contentType = (xhr.getResponseHeader('content-type') || '').toLowerCase();
+
+                    if (contentType.includes('application/json')) {
+                        try {
+                            const json = JSON.parse(body);
+                            if (json.redirect && String(json.redirect).includes('login')) {
+                                return true;
+                            }
+                        } catch (e) {
+                            // ignore parse errors
+                        }
+                    }
+
+                    if (contentType.includes('text/html') && body.length > 0) {
+                        return body.includes('pinLoginForm')
+                            || body.includes('login_by_pin')
+                            || (body.includes('csrf-token') && body.includes('/login'));
+                    }
+
+                    return false;
+                }
+
+                function stopSpinners() {
+                    if (typeof $.fn.dataTable !== 'undefined') {
+                        try {
+                            $.fn.dataTable.tables({ visible: true, api: true }).processing(false);
+                        } catch (e) {
+                            // ignore
+                        }
+                    }
+
+                    document.querySelectorAll('.dataTables_processing').forEach(function (el) {
+                        el.style.display = 'none';
+                    });
+
+                    document.body.classList.remove('pace-running');
+                    const pace = document.getElementById('pace');
+                    if (pace) {
+                        pace.classList.remove('pace-active');
+                    }
+                }
+
+                function handleExpired(message) {
+                    if (redirecting) return;
+                    redirecting = true;
+                    stopSpinners();
+
+                    const loginUrl = @json(route('login')) + '?expired=1';
+                    const text = message || @json(__('app.session_expired'));
+                    const title = @json(__('app.session_expired_title'));
+
+                    if (typeof Swal !== 'undefined') {
+                        Swal.fire({
+                            icon: 'warning',
+                            title: title,
+                            text: text,
+                            confirmButtonText: @json(__('app.sign_in')),
+                            allowOutsideClick: false,
+                            allowEscapeKey: false,
+                        }).then(function () {
+                            window.location.href = loginUrl;
+                        });
+                    } else {
+                        alert(text);
+                        window.location.href = loginUrl;
+                    }
+                }
+
+                return { isExpired, handleExpired, stopSpinners };
+            })();
             
             // Global AJAX error handler for unhandled errors
-            $(document).ajaxError(function(event, xhr, settings, thrownError) {
+            $(document).ajaxError(function(event, xhr, settings) {
+                if (settings && settings.skipSessionHandler) return;
+
+                if (window.SmartPosSession && window.SmartPosSession.isExpired(xhr)) {
+                    window.SmartPosSession.handleExpired();
+                    return;
+                }
+
                 // Only handle JSON responses with error messages
                 if (xhr.responseJSON && xhr.responseJSON.message && !xhr.responseJSON.success) {
                     // Check if this error is already being handled by a specific error handler
@@ -145,6 +244,18 @@
                     }
                 }
             });
+
+            const originalFetch = window.fetch;
+            if (originalFetch) {
+                window.fetch = function () {
+                    return originalFetch.apply(this, arguments).then(function (response) {
+                        if (response.status === 401 || response.status === 419) {
+                            window.SmartPosSession.handleExpired();
+                        }
+                        return response;
+                    });
+                };
+            }
         });
     </script>
 

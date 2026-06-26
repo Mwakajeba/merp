@@ -54,6 +54,20 @@ Route::prefix('guest')->group(function () {
     });
 });
 
+// SmartPOS Mobile App (Accountant & Admin)
+Route::prefix('smartpos')->group(function () {
+    Route::post('/login', [App\Http\Controllers\Api\SmartPosMobileController::class, 'login']);
+
+    Route::middleware('auth:sanctum')->group(function () {
+        Route::post('/logout', [App\Http\Controllers\Api\SmartPosMobileController::class, 'logout']);
+        Route::get('/me', [App\Http\Controllers\Api\SmartPosMobileController::class, 'me']);
+        Route::get('/dashboard', [App\Http\Controllers\Api\SmartPosMobileController::class, 'dashboard']);
+        Route::get('/bills', [App\Http\Controllers\Api\SmartPosMobileController::class, 'bills']);
+        Route::post('/bills/{encodedId}/pay', [App\Http\Controllers\Api\SmartPosMobileController::class, 'payBill']);
+        Route::get('/bank-accounts', [App\Http\Controllers\Api\SmartPosMobileController::class, 'bankAccounts']);
+    });
+});
+
 // ==================== PROTECTED API ROUTES (Require Authentication) ====================
 
 Route::middleware('auth:sanctum')->group(function () {

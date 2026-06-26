@@ -12,6 +12,8 @@ use App\Services\ExpiryStockService;
 use App\Services\FxTransactionRateService;
 use App\Services\InventoryCostService;
 use App\Services\InventoryStockService;
+use App\Models\User;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Auth;
 
 class PosBillService
@@ -222,5 +224,38 @@ class PosBillService
             'branch_id' => $branchId,
             'status' => 'active',
         ]);
+    }
+
+    /**
+     * Limit open POS bills to the current user unless they can view all bills.
+     */
+    public static function applyCashierBillVisibility(Builder $query, ?User $user = null): Builder
+    {
+        $user = $user ?? Auth::user();
+
+        if (!$user) {
+            return $query->whereRaw('1 = 0');
+        }
+
+        if ($user->can('view all pos bills')) {
+            return $query;
+        }
+
+        return $query->where('created_by', $user->id);
+    }
+
+    public static function userCanAccessBill(SalesInvoice $invoice, ?User $user = null): bool
+    {
+        $user = $user ?? Auth::user();
+
+        if (!$user) {
+            return false;
+        }
+
+        if ($user->can('view all pos bills')) {
+            return true;
+        }
+
+        return (int) $invoice->created_by === (int) $user->id;
     }
 }

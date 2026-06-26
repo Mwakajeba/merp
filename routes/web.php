@@ -316,6 +316,7 @@ Route::middleware(['auth', 'require.branch'])->group(function () {
 // Additional user routes (must come BEFORE resource route)
 Route::get('/users/profile', [UserController::class, 'profile'])->name('users.profile')->middleware(['auth', 'require.branch']);
 Route::put('/users/profile', [UserController::class, 'updateProfile'])->name('users.profile.update')->middleware(['auth', 'require.branch']);
+Route::post('/users/profile/change-pin', [UserController::class, 'changePin'])->name('users.profile.change-pin')->middleware(['auth', 'require.branch']);
 Route::get('/users/employees', [UserController::class, 'employees'])->name('users.employees')->middleware(['auth']);
 Route::get('/users/data', [UserController::class, 'data'])->name('users.data')->middleware(['auth', 'company.scope', 'require.branch']);
 

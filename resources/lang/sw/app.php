@@ -54,7 +54,8 @@ return [
     'phone_not_found' => 'Nambari ya simu haijapatikana.',
     'invalid_password' => 'Neno la siri si sahihi.',
     'password_reset_success' => 'Neno la siri limewekwa upya kwa mafanikio. Unaweza kuingia sasa.',
-    'session_expired' => 'Muda wa kikao umekwisha. Tafadhali jaribu tena.',
+    'session_expired' => 'Muda wa kikao umekwisha. Tafadhali ingia tena.',
+    'session_expired_title' => 'Kikao Kimekwisha',
     'invalid_verification_code' => 'Msimbo wa uthibitisho si sahihi.',
     'phone_verified_success' => 'Simu imethibitishwa kwa mafanikio!',
     'login_by_pin' => 'Ingia kwa PIN',
@@ -70,6 +71,7 @@ return [
     'confirm_new_pin' => 'Thibitisha PIN Mpya',
     'reset_pin' => 'Weka Upya PIN',
     'pin_reset_success' => 'PIN imewekwa upya kwa mafanikio.',
+    'pin_change_success' => 'PIN imebadilishwa kwa mafanikio.',
     'user_pin_created' => 'Mtumiaji :name ameundwa. PIN ya kuingia: :pin',
 
     // Navigation

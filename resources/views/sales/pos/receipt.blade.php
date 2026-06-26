@@ -4,6 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>POS Receipt - {{ $posSale->sale_number }}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
         /* Reset and base styles */
         * {
@@ -12,15 +15,20 @@
             box-sizing: border-box;
         }
         
+        body,
+        .receipt {
+            font-family: Roboto, sans-serif;
+        }
+        
         body {
-            font-family: Arial, Helvetica, sans-serif;
-            font-size: 11px;
-            line-height: 1.3;
+            font-size: 13px;
+            line-height: 1.5;
             margin: 0;
             padding: 0;
             background: white;
-            color: black;
-            font-weight: bold;
+            color: #000;
+            font-weight: 400;
+            -webkit-font-smoothing: antialiased;
         }
         
         .receipt {
@@ -49,30 +57,30 @@
         }
         
         .company-name {
-            font-size: 16px;
-            font-weight: bold;
+            font-size: 20px;
+            font-weight: 700;
             margin-bottom: 5px;
             text-transform: uppercase;
             letter-spacing: 0.5px;
         }
         
         .receipt-title {
-            font-size: 13px;
-            font-weight: bold;
+            font-size: 16px;
+            font-weight: 700;
             margin-bottom: 5px;
             text-transform: uppercase;
             letter-spacing: 1px;
         }
         
         .branch-name {
-            font-size: 11px;
+            font-size: 13px;
             margin-bottom: 4px;
         }
         
         /* Receipt information */
         .receipt-info {
             margin-bottom: 12px;
-            font-size: 10px;
+            font-size: 12px;
             padding: 0 3px;
         }
         
@@ -84,7 +92,7 @@
         }
         
         .receipt-info .label {
-            font-weight: bold;
+            font-weight: 500;
         }
         
         /* Items section */
@@ -101,22 +109,22 @@
         }
         
         .item-name {
-            font-weight: bold;
-            font-size: 10px;
+            font-weight: 500;
+            font-size: 12px;
             margin-bottom: 3px;
             word-wrap: break-word;
             padding: 0 2px;
         }
         
         .item-details {
-            font-size: 9px;
+            font-size: 11px;
             color: #666;
             margin-bottom: 3px;
             padding: 0 2px;
         }
         
         .item-expiry {
-            font-size: 8px;
+            font-size: 10px;
             color: #888;
             margin-bottom: 2px;
             padding: 0 2px;
@@ -134,8 +142,8 @@
         
         .item-total {
             text-align: right;
-            font-weight: bold;
-            font-size: 10px;
+            font-weight: 500;
+            font-size: 12px;
             padding: 0 2px;
         }
         
@@ -144,7 +152,7 @@
             border-top: 1px dashed #000;
             padding-top: 12px;
             margin-top: 12px;
-            font-size: 10px;
+            font-size: 12px;
             padding: 0 3px;
         }
         
@@ -156,8 +164,8 @@
         }
         
         .total-row.final {
-            font-weight: bold;
-            font-size: 14px;
+            font-weight: 700;
+            font-size: 18px;
             border-top: 1px solid #000;
             padding-top: 6px;
             margin-top: 6px;
@@ -168,7 +176,7 @@
             margin-top: 12px;
             border-top: 1px dashed #000;
             padding-top: 12px;
-            font-size: 10px;
+            font-size: 12px;
             padding: 0 3px;
         }
         
@@ -183,7 +191,7 @@
         .footer {
             text-align: center;
             margin-top: 18px;
-            font-size: 9px;
+            font-size: 11px;
             color: #666;
             border-top: 1px dashed #000;
             padding-top: 12px;
@@ -200,7 +208,7 @@
             margin-top: 12px;
             border-top: 1px dashed #000;
             padding-top: 12px;
-            font-size: 10px;
+            font-size: 12px;
             padding: 0 3px;
         }
         
@@ -217,7 +225,14 @@
         /* Print media query – align behavior with Sales Invoice receipt */
         @media print {
             @page { margin: 0; }
-            body { margin: 6mm; }
+            body {
+                margin: 6mm;
+                font-size: 13px;
+                line-height: 1.5;
+                font-family: Roboto, sans-serif;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
             .no-print { display: none; }
         }
         
