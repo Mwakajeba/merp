@@ -183,6 +183,24 @@ class PosSale extends Model
         return $query->where('operator_id', $operatorId);
     }
 
+    /**
+     * Limit POS sales list to the current operator unless they can view all sales.
+     */
+    public function scopeVisibleToUser(Builder $query, ?User $user = null): Builder
+    {
+        $user = $user ?? auth()->user();
+
+        if (!$user) {
+            return $query->whereRaw('1 = 0');
+        }
+
+        if ($user->can('view all pos sales')) {
+            return $query;
+        }
+
+        return $query->where('operator_id', $user->id);
+    }
+
     public function scopeToday(Builder $query): Builder
     {
         return $query->whereDate('sale_date', today());

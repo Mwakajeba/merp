@@ -322,6 +322,11 @@ class PermissionGroupsSeeder extends Seeder
                 'delete sales invoices',
                 'record sales payment',
                 'delete sales payment',
+                'access pos cashier',
+                'view all pos bills',
+                'view all sales invoices',
+                'access pos list',
+                'view all pos sales',
 
                 // Cash Sales
                 'view cash sales',

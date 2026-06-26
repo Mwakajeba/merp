@@ -106,7 +106,62 @@
             </div>
         </div>
 
+        @if(!$isEdit)
+        <div class="col-12">
+            <div class="card radius-10 mb-4">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0"><i class="bx bx-buildings me-2"></i>Branch & Location</h5>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted small mb-3">
+                        Assign the user's primary branch and location now. To give access to more than one branch or location later, use
+                        <strong>Assign Branch</strong> and <strong>Assign Locations</strong> on the user profile page.
+                    </p>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="branch_id" class="form-label">Branch <span class="text-danger">*</span></label>
+                            <select name="branch_id" id="branch_id"
+                                    class="form-control @error('branch_id') is-invalid @enderror" required>
+                                <option value="">Select Branch</option>
+                                @foreach(($branches ?? []) as $branch)
+                                    <option value="{{ $branch->id }}"
+                                        {{ (string) old('branch_id') === (string) $branch->id ? 'selected' : '' }}>
+                                        {{ $branch->name }}
+                                    </option>
+                                @endforeach
+                            </select>
+                            @error('branch_id') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label for="location_id" class="form-label">Location <span class="text-danger">*</span></label>
+                            <select name="location_id" id="location_id"
+                                    class="form-control @error('location_id') is-invalid @enderror" required disabled>
+                                <option value="">Select branch first</option>
+                            </select>
+                            @error('location_id') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        @endif
+
         @if($isEdit)
+        <div class="col-12">
+            <div class="card radius-10 mb-4">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0"><i class="bx bx-git-branch me-2"></i>Branch & Location</h5>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted mb-0">
+                        To change branch or location access, open the user profile and use
+                        <strong>Assign/View Branch</strong> and <strong>Assign/View Locations</strong>.
+                    </p>
+                </div>
+            </div>
+        </div>
+
         <div class="col-12">
             <div class="card radius-10 mb-4">
                 <div class="card-header bg-success text-white">
@@ -152,6 +207,62 @@
 document.addEventListener('DOMContentLoaded', function () {
     const pinInput = document.getElementById('pin');
     const userForm = document.getElementById('userForm');
+    const branchSelect = document.getElementById('branch_id');
+    const locationSelect = document.getElementById('location_id');
+    const savedLocationId = @json(old('location_id'));
+
+    function loadLocations(branchId, selectedLocationId = null) {
+        if (!locationSelect) {
+            return;
+        }
+
+        if (!branchId) {
+            locationSelect.innerHTML = '<option value="">Select branch first</option>';
+            locationSelect.disabled = true;
+            return;
+        }
+
+        locationSelect.innerHTML = '<option value="">Loading locations...</option>';
+        locationSelect.disabled = true;
+
+        fetch(`{{ url('/api/branches') }}/${branchId}/locations`, {
+            headers: { 'X-Requested-With': 'XMLHttpRequest' },
+        })
+            .then((response) => response.json())
+            .then((locations) => {
+                locationSelect.innerHTML = '<option value="">Select Location</option>';
+
+                if (!locations.length) {
+                    locationSelect.innerHTML = '<option value="">No locations for this branch</option>';
+                    return;
+                }
+
+                locations.forEach((location) => {
+                    const option = document.createElement('option');
+                    option.value = location.id;
+                    option.textContent = location.name;
+                    if (String(selectedLocationId) === String(location.id)) {
+                        option.selected = true;
+                    }
+                    locationSelect.appendChild(option);
+                });
+
+                locationSelect.disabled = false;
+            })
+            .catch(() => {
+                locationSelect.innerHTML = '<option value="">Could not load locations</option>';
+            });
+    }
+
+    if (branchSelect && locationSelect) {
+        branchSelect.addEventListener('change', function () {
+            loadLocations(this.value);
+        });
+
+        if (branchSelect.value) {
+            loadLocations(branchSelect.value, savedLocationId);
+        }
+    }
 
     if (pinInput) {
         pinInput.addEventListener('input', function () {
@@ -178,6 +289,18 @@ document.addEventListener('DOMContentLoaded', function () {
             if (!role) {
                 e.preventDefault();
                 alert('Please select a role.');
+                return false;
+            }
+
+            if (branchSelect && !branchSelect.value) {
+                e.preventDefault();
+                alert('Please select a branch.');
+                return false;
+            }
+
+            if (locationSelect && !locationSelect.value) {
+                e.preventDefault();
+                alert('Please select a location.');
                 return false;
             }
         });

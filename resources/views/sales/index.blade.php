@@ -24,14 +24,16 @@
                         @php
                             $branchId = session('branch_id') ?? auth()->user()->branch_id;
                             $posSaleMode = \App\Models\SystemSetting::getValue('pos_sale_mode', 'direct');
-                            $unpaidPosBillsCount = $posSaleMode === 'bill'
-                                ? \App\Models\Sales\SalesInvoice::query()
-                                    ->when($branchId, fn ($q) => $q->where('branch_id', $branchId))
-                                    ->where('reference_no', \App\Services\Sales\PosBillService::REFERENCE_NO)
-                                    ->where('balance_due', '>', 0)
-                                    ->whereNotIn('status', ['paid', 'cancelled'])
-                                    ->count()
-                                : 0;
+                            $unpaidBillsQuery = \App\Models\Sales\SalesInvoice::query()
+                                ->when($branchId, fn ($q) => $q->where('branch_id', $branchId))
+                                ->where('reference_no', \App\Services\Sales\PosBillService::REFERENCE_NO)
+                                ->where('balance_due', '>', 0)
+                                ->whereNotIn('status', ['paid', 'cancelled']);
+                            \App\Services\Sales\PosBillService::applyCashierBillVisibility($unpaidBillsQuery);
+                            $unpaidPosBillsCount = $posSaleMode === 'bill' ? $unpaidBillsQuery->count() : 0;
+                            $posListCountQuery = \App\Models\Sales\PosSale::query()
+                                ->when($branchId, fn ($q) => $q->where('branch_id', $branchId));
+                            $posListCount = $posListCountQuery->visibleToUser()->count();
                         @endphp
                         <div class="row">
                             <div class="col-md-6 col-lg-3 mb-4">
@@ -103,7 +105,7 @@
                                 </div>
                             </div>
 
-                            @if($posSaleMode === 'bill')
+                            @if($posSaleMode === 'bill' && auth()->user()->can('access pos cashier'))
                             <div class="col-md-6 col-lg-3 mb-4">
                                 <div class="card border-success position-relative h-100">
                                     <div class="card-body text-center">
@@ -131,17 +133,23 @@
                             <div class="col-md-6 col-lg-3 mb-4">
                                 <div class="card border-dark position-relative h-100">
                                     <div class="card-body text-center">
+                                        @can('access pos list')
                                         <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-dark">
-                                            {{ \App\Models\Sales\PosSale::forBranch(auth()->user()->branch_id)->count() }}
+                                            {{ $posListCount }}
                                         </span>
+                                        @endcan
                                         <div class="mb-3">
                                             <i class="bx bx-list-ul fs-1 text-dark"></i>
                                         </div>
                                         <h5 class="card-title">POS List</h5>
                                         <p class="card-text">View and manage POS sales transactions.</p>
+                                        @can('access pos list')
                                         <a href="{{ route('sales.pos.list') }}" class="btn btn-dark">
                                             <i class="bx bx-list-ul me-1"></i> POS List
                                         </a>
+                                        @else
+                                        <span class="text-muted small">No access</span>
+                                        @endcan
                                     </div>
                                 </div>
                             </div>

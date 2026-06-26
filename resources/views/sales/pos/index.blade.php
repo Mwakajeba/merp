@@ -145,9 +145,11 @@
             <div class="col-12">
                 <div class="page-title-box d-flex align-items-center justify-content-between">
                     <h4 class="mb-0">Point of Sale</h4>
+                    @can('access pos list')
                     <a href="{{ route('sales.pos.list') }}" class="btn btn-outline-primary btn-sm">
                         <i class="bx bx-list-ul me-1"></i> POS Sales List
                     </a>
+                    @endcan
                 </div>
             </div>
         </div>
@@ -424,7 +426,7 @@
                                 <button type="button" class="btn btn-outline-secondary" onclick="clearCart()">
                                     <i class="bx bx-refresh"></i> Clear Cart
                                 </button>
-                                @if(($posSaleMode ?? 'direct') === 'bill')
+                                @if(($posSaleMode ?? 'direct') === 'bill' && auth()->user()->can('access pos cashier'))
                                 <a href="{{ route('sales.pos.cashier') }}" class="btn btn-outline-primary">
                                     <i class="bx bx-money"></i> Cashier — Pay Bills
                                 </a>
@@ -436,9 +438,11 @@
                             <button type="button" class="btn btn-success btn-lg" onclick="processSale()">
                                 <i class="bx bx-receipt"></i> Create Bill
                             </button>
+                            @can('access pos cashier')
                             <a href="{{ route('sales.pos.cashier') }}" class="btn btn-outline-primary">
                                 <i class="bx bx-money"></i> Cashier — Pay Bills
                             </a>
+                            @endcan
                         </div>
                         @endif
                     </div>

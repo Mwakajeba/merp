@@ -11,6 +11,13 @@
             ['label' => 'POS Sales List', 'url' => '#', 'icon' => 'bx bx-list-ul']
         ]" />
 
+        @cannot('view all pos sales')
+        <div class="alert alert-info border-0 bg-info bg-opacity-10 text-info mb-4">
+            <i class="bx bx-info-circle me-1"></i>
+            Showing your POS sales only. Contact an administrator to view all operators' sales.
+        </div>
+        @endcannot
+
         <!-- Statistics Cards -->
         <div class="row mb-4">
             <div class="col-xl-3 col-md-6">

@@ -389,6 +389,11 @@
                     <li><a class="dropdown-item" href="{{ route('users.profile') }}"><i class='bx bx-home-circle'></i><span>Change Password</span></a>
                     </li>
                     <li>
+                        <a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#changePinModal">
+                            <i class="bx bx-key"></i><span>{{ __('app.change_pin') }}</span>
+                        </a>
+                    </li>
+                    <li>
                         <div class="dropdown-divider mb-0"></div>
                     </li>
                     <li>
@@ -404,6 +409,165 @@
 <form id="logout-form" action="{{ url('/logout') }}" method="POST" style="display: none;">
     @csrf
 </form>
+
+@php $userHasPin = auth()->check() && auth()->user()->getPlainPin(); @endphp
+<div class="modal fade" id="changePinModal" tabindex="-1" aria-labelledby="changePinModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <form id="changePinForm" action="{{ route('users.profile.change-pin') }}" method="POST">
+                @csrf
+                <div class="modal-header">
+                    <h5 class="modal-title" id="changePinModalLabel">
+                        <i class="bx bx-key me-1"></i> {{ __('app.change_pin') }}
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="text-muted small mb-3">{{ __('app.pin_login_help') }}</p>
+                    <div id="changePinAlert" class="alert alert-danger d-none" role="alert"></div>
+
+                    @if($userHasPin)
+                    <div class="mb-3">
+                        <label for="modal_current_pin" class="form-label">{{ __('app.current_pin') }} <span class="text-danger">*</span></label>
+                        <input type="password" class="form-control pin-input" id="modal_current_pin" name="current_pin"
+                               maxlength="4" inputmode="numeric" pattern="[0-9]{4}" placeholder="••••" autocomplete="off" required>
+                    </div>
+                    @endif
+
+                    <div class="mb-3">
+                        <label for="modal_new_pin" class="form-label">{{ __('app.new_pin') }} <span class="text-danger">*</span></label>
+                        <input type="password" class="form-control pin-input" id="modal_new_pin" name="new_pin"
+                               maxlength="4" inputmode="numeric" pattern="[0-9]{4}" placeholder="••••" autocomplete="off" required>
+                    </div>
+
+                    <div class="mb-0">
+                        <label for="modal_new_pin_confirmation" class="form-label">{{ __('app.confirm_new_pin') }} <span class="text-danger">*</span></label>
+                        <input type="password" class="form-control pin-input" id="modal_new_pin_confirmation" name="new_pin_confirmation"
+                               maxlength="4" inputmode="numeric" pattern="[0-9]{4}" placeholder="••••" autocomplete="off" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="changePinSubmitBtn">
+                        <i class="bx bx-save me-1"></i> {{ __('app.change_pin') }}
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script nonce="{{ $cspNonce ?? '' }}">
+document.addEventListener('DOMContentLoaded', function () {
+    const changePinForm = document.getElementById('changePinForm');
+    const changePinModal = document.getElementById('changePinModal');
+    const changePinAlert = document.getElementById('changePinAlert');
+    const submitBtn = document.getElementById('changePinSubmitBtn');
+
+    document.querySelectorAll('#changePinModal .pin-input').forEach(function (input) {
+        input.addEventListener('input', function () {
+            this.value = this.value.replace(/\D/g, '').slice(0, 4);
+        });
+    });
+
+    if (changePinModal) {
+        changePinModal.addEventListener('hidden.bs.modal', function () {
+            if (changePinForm) {
+                changePinForm.reset();
+            }
+            if (changePinAlert) {
+                changePinAlert.classList.add('d-none');
+                changePinAlert.textContent = '';
+            }
+        });
+    }
+
+    if (!changePinForm) {
+        return;
+    }
+
+    changePinForm.addEventListener('submit', function (e) {
+        e.preventDefault();
+
+        const newPin = document.getElementById('modal_new_pin')?.value || '';
+        const confirmPin = document.getElementById('modal_new_pin_confirmation')?.value || '';
+        const currentPinInput = document.getElementById('modal_current_pin');
+        const currentPin = currentPinInput ? currentPinInput.value : '';
+
+        if (changePinAlert) {
+            changePinAlert.classList.add('d-none');
+            changePinAlert.textContent = '';
+        }
+
+        if (currentPinInput && !currentPin) {
+            changePinAlert.textContent = '{{ __('app.invalid_current_pin') }}';
+            changePinAlert.classList.remove('d-none');
+            return;
+        }
+
+        if (newPin.length !== 4) {
+            changePinAlert.textContent = 'New PIN must be 4 digits.';
+            changePinAlert.classList.remove('d-none');
+            return;
+        }
+
+        if (newPin !== confirmPin) {
+            changePinAlert.textContent = 'New PINs do not match.';
+            changePinAlert.classList.remove('d-none');
+            return;
+        }
+
+        const originalHtml = submitBtn.innerHTML;
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="bx bx-loader-alt bx-spin me-1"></i> Saving...';
+
+        fetch(changePinForm.action, {
+            method: 'POST',
+            body: new FormData(changePinForm),
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'Accept': 'application/json',
+            },
+        })
+            .then(async (response) => {
+                const data = await response.json().catch(() => ({}));
+                if (!response.ok) {
+                    const message = data.message
+                        || (data.errors && Object.values(data.errors).flat()[0])
+                        || 'Could not update PIN.';
+                    throw new Error(message);
+                }
+                return data;
+            })
+            .then((data) => {
+                const modalInstance = bootstrap.Modal.getInstance(changePinModal);
+                modalInstance && modalInstance.hide();
+
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        icon: 'success',
+                        title: '{{ __('app.change_pin') }}',
+                        text: data.message || '{{ __('app.pin_change_success') }}',
+                        timer: 2200,
+                        showConfirmButton: false,
+                    });
+                } else {
+                    alert(data.message || '{{ __('app.pin_change_success') }}');
+                }
+            })
+            .catch((error) => {
+                if (changePinAlert) {
+                    changePinAlert.textContent = error.message;
+                    changePinAlert.classList.remove('d-none');
+                }
+            })
+            .finally(() => {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalHtml;
+            });
+    });
+});
+</script>
 
 <style>
     .subscription-warning-bar {

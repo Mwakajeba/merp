@@ -4,14 +4,22 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ \App\Models\SystemSetting::getValue('sales_invoice_print_title', 'SALES INVOICE') }} - {{ $invoice->invoice_number }}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
+        body,
+        .receipt {
+            font-family: Roboto, sans-serif;
+        }
         body {
-            font-family: Arial, Helvetica, sans-serif;
-            font-size: 11px;
-            line-height: 1.3;
+            font-size: 13px;
+            line-height: 1.5;
             background: white;
-            color: black;
+            color: #000;
+            font-weight: 400;
+            -webkit-font-smoothing: antialiased;
         }
         .receipt {
             width: 320px;
@@ -26,13 +34,13 @@
             margin-bottom: 12px;
         }
         .company-name {
-            font-size: 16px;
-            font-weight: bold;
+            font-size: 20px;
+            font-weight: 700;
             text-transform: uppercase;
         }
         .receipt-title {
-            font-size: 13px;
-            font-weight: bold;
+            font-size: 16px;
+            font-weight: 700;
             margin: 6px 0;
             text-transform: uppercase;
         }
@@ -40,16 +48,16 @@
             display: flex;
             justify-content: space-between;
             margin-bottom: 3px;
-            font-size: 10px;
+            font-size: 12px;
         }
-        .receipt-info .label { font-weight: bold; }
+        .receipt-info .label { font-weight: 500; }
         .item {
             margin-bottom: 8px;
             border-bottom: 1px dotted #ccc;
             padding-bottom: 5px;
-            font-size: 10px;
+            font-size: 12px;
         }
-        .item-name { font-weight: bold; margin-bottom: 2px; }
+        .item-name { font-weight: 500; font-size: 12px; margin-bottom: 2px; }
         .item-line {
             display: flex;
             justify-content: space-between;
@@ -58,7 +66,7 @@
             border-top: 1px dashed #000;
             padding-top: 8px;
             margin-top: 8px;
-            font-size: 10px;
+            font-size: 12px;
         }
         .totals .row {
             display: flex;
@@ -66,8 +74,8 @@
             margin-bottom: 3px;
         }
         .totals .final {
-            font-weight: bold;
-            font-size: 12px;
+            font-weight: 700;
+            font-size: 18px;
             margin-top: 6px;
             padding-top: 6px;
             border-top: 1px solid #000;
@@ -75,7 +83,7 @@
         .footer {
             text-align: center;
             margin-top: 12px;
-            font-size: 9px;
+            font-size: 11px;
         }
         .no-print {
             text-align: center;
@@ -83,7 +91,14 @@
         }
         @media print {
             @page { margin: 0; }
-            body { margin: 6mm; }
+            body {
+                margin: 6mm;
+                font-size: 13px;
+                line-height: 1.5;
+                font-family: Roboto, sans-serif;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
             .no-print { display: none; }
         }
     </style>

@@ -22,6 +22,12 @@ use Vinkla\Hashids\Facades\Hashids;
 
 class PosSaleController extends Controller
 {
+    public function __construct()
+    {
+        $this->middleware('permission:access pos cashier', ['only' => ['cashier', 'payBill']]);
+        $this->middleware('permission:access pos list', ['only' => ['list']]);
+    }
+
     /**
      * Display POS interface
      */
@@ -835,7 +841,10 @@ class PosSaleController extends Controller
         if ($request->ajax()) {
             $branchId = session('branch_id') ?? (Auth::user()->branch_id ?? null);
             $query = PosSale::with(['customer', 'operator', 'branch', 'items'])
+                ->where('company_id', Auth::user()->company_id)
                 ->when($branchId, fn($q) => $q->where('branch_id', $branchId));
+
+            $query->visibleToUser();
 
             // Filter by date range
             if ($request->filled('start_date')) {
@@ -940,6 +949,8 @@ class PosSaleController extends Controller
         // Calculate statistics
         $baseQuery = PosSale::where('company_id', Auth::user()->company_id)
             ->when($branchId, fn($q) => $q->where('branch_id', $branchId));
+
+        $baseQuery->visibleToUser();
         
         $totalSales = (clone $baseQuery)->count();
         $totalAmount = (clone $baseQuery)->sum('total_amount');
@@ -953,7 +964,10 @@ class PosSaleController extends Controller
         $totalVat = (clone $baseQuery)->sum('vat_amount');
 
         $query = PosSale::with(['customer', 'operator', 'branch'])
+            ->where('company_id', Auth::user()->company_id)
             ->when($branchId, fn($q) => $q->where('branch_id', $branchId));
+
+        $query->visibleToUser();
 
         // Filter by date range
         if ($request->filled('start_date')) {
@@ -1126,8 +1140,9 @@ class PosSaleController extends Controller
             ->get();
 
         $posAutoPrintReceipt = (bool) SystemSetting::getValue('pos_auto_print_receipt', true);
+        $canViewAllBills = Auth::user()->can('view all pos bills');
 
-        return view('sales.pos.cashier', compact('bankAccounts', 'posAutoPrintReceipt'));
+        return view('sales.pos.cashier', compact('bankAccounts', 'posAutoPrintReceipt', 'canViewAllBills'));
     }
 
     /**
@@ -1139,13 +1154,16 @@ class PosSaleController extends Controller
 
         $baseQuery = SalesInvoice::query()
             ->where('reference_no', PosBillService::REFERENCE_NO)
+            ->where('company_id', Auth::user()->company_id)
             ->when($branchId, fn ($q) => $q->where('branch_id', $branchId))
             ->where('balance_due', '>', 0)
             ->whereNotIn('status', ['paid', 'cancelled']);
 
+        PosBillService::applyCashierBillVisibility($baseQuery);
+
         $recordsTotal = (clone $baseQuery)->count();
 
-        $query = (clone $baseQuery)->with(['customer']);
+        $query = (clone $baseQuery)->with(['customer', 'createdBy']);
 
         if ($request->filled('search.value')) {
             $searchValue = $request->input('search.value');
@@ -1182,12 +1200,14 @@ class PosSaleController extends Controller
         $bills = $query->skip($start)->take($length)->get();
 
         $data = [];
+        $canViewAllBills = Auth::user()->can('view all pos bills');
+
         foreach ($bills as $bill) {
             $customerName = $bill->customer->name ?? 'N/A';
             $encodedId = $bill->encoded_id;
             $currency = strtoupper($bill->currency ?? 'TZS');
 
-            $data[] = [
+            $row = [
                 'invoice_number' => '<span class="fw-bold text-primary">' . e($bill->invoice_number) . '</span>',
                 'customer_name' => e($customerName),
                 'invoice_date' => format_datetime($bill->invoice_date ?? $bill->created_at, 'd/m/Y H:i'),
@@ -1203,6 +1223,12 @@ class PosSaleController extends Controller
                     '<i class="bx bx-printer"></i></a>' .
                     '</div>',
             ];
+
+            if ($canViewAllBills) {
+                $row['created_by_name'] = e($bill->createdBy->name ?? '—');
+            }
+
+            $data[] = $row;
         }
 
         return response()->json([
@@ -1225,6 +1251,10 @@ class PosSaleController extends Controller
         }
 
         $invoice = SalesInvoice::findOrFail($invoiceId);
+
+        if (!PosBillService::userCanAccessBill($invoice)) {
+            return response()->json(['success' => false, 'message' => 'You can only pay your own POS bills.'], 403);
+        }
 
         if ($invoice->reference_no !== PosBillService::REFERENCE_NO) {
             return response()->json(['success' => false, 'message' => 'This invoice is not a POS bill'], 422);

@@ -29,6 +29,12 @@
                                         </div>
                                     @endif
 
+                                    @if (request()->boolean('expired'))
+                                        <div class="alert alert-warning py-2 text-center">
+                                            {{ __('app.session_expired') }}
+                                        </div>
+                                    @endif
+
                                     <form method="POST" action="{{ route('login.pin.submit') }}" id="pinLoginForm">
                                         @csrf
                                         <input type="hidden" name="pin" id="pin" value="{{ old('pin') }}">
@@ -228,6 +234,8 @@ document.addEventListener('DOMContentLoaded', function () {
     const enterBtn = document.getElementById('pinEnter');
     const clearBtn = document.getElementById('pinClear');
 
+    let isSubmitting = false;
+
     function updateDisplay() {
         pinInput.value = pinValue;
         pinDots.forEach(function (dot, index) {
@@ -235,14 +243,17 @@ document.addEventListener('DOMContentLoaded', function () {
             dot.classList.remove('error');
         });
         if (enterBtn) {
-            enterBtn.disabled = pinValue.length !== maxLength;
+            enterBtn.disabled = pinValue.length !== maxLength || isSubmitting;
         }
     }
 
     function appendDigit(digit) {
-        if (pinValue.length >= maxLength) return;
+        if (pinValue.length >= maxLength || isSubmitting) return;
         pinValue += digit;
         updateDisplay();
+        if (pinValue.length === maxLength) {
+            submitPin();
+        }
     }
 
     function clearPin() {
@@ -256,7 +267,11 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function submitPin() {
-        if (pinValue.length !== maxLength) return;
+        if (pinValue.length !== maxLength || isSubmitting) return;
+        isSubmitting = true;
+        if (enterBtn) {
+            enterBtn.disabled = true;
+        }
         pinForm.submit();
     }
 

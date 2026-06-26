@@ -40,6 +40,9 @@
                         <h5 class="card-title mb-3">Unpaid Bills</h5>
                         <p class="text-muted small mb-3">
                             Search by customer name, phone, customer number, or bill number.
+                            @unless($canViewAllBills ?? false)
+                                <span class="d-block">You only see bills you created.</span>
+                            @endunless
                         </p>
                         <div class="table-responsive">
                             <table id="open-bills-table" class="table table-striped table-bordered dt-responsive nowrap w-100">
@@ -47,6 +50,9 @@
                                     <tr>
                                         <th>Bill #</th>
                                         <th>Customer</th>
+                                        @if($canViewAllBills ?? false)
+                                        <th>Created By</th>
+                                        @endif
                                         <th>Date</th>
                                         <th class="text-end">Balance</th>
                                         <th class="text-end" style="width: 120px;">Actions</th>
@@ -209,11 +215,14 @@ $(document).ready(function () {
         columns: [
             { data: 'invoice_number', name: 'invoice_number' },
             { data: 'customer_name', name: 'customer_name' },
+            @if($canViewAllBills ?? false)
+            { data: 'created_by_name', name: 'created_by_name', orderable: false, searchable: false },
+            @endif
             { data: 'invoice_date', name: 'invoice_date' },
             { data: 'balance_due', name: 'balance_due', className: 'text-end' },
             { data: 'actions', name: 'actions', orderable: false, searchable: false, className: 'text-end' }
         ],
-        order: [[2, 'desc']],
+        order: [[{{ ($canViewAllBills ?? false) ? 3 : 2 }}, 'desc']],
         pageLength: 25,
         language: {
             processing: '<div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div>',
