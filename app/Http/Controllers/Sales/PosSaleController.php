@@ -27,8 +27,6 @@ class PosSaleController extends Controller
      */
     public function index()
     {
-        // Get items with stock > 0 at current location using InventoryStockService
-        $stockService = new \App\Services\InventoryStockService();
         $loginLocationId = session('location_id');
         
         // If no location is set, try to set default location
@@ -47,9 +45,6 @@ class PosSaleController extends Controller
                 }
             }
         }
-        
-        $inventoryItems = $stockService->getAvailableItemsForSales(auth()->user()->company_id, $loginLocationId);
-        \App\Models\Inventory\Item::withResolvedPricesForContext($inventoryItems);
 
         // Create a virtual walk-in customer object (not saved to database)
         $walkInCustomer = (object) [
@@ -88,7 +83,6 @@ class PosSaleController extends Controller
         $defaultBillCustomerName = Auth::user()->name ?? 'Walk-in Customer';
 
         return view('sales.pos.index', compact(
-            'inventoryItems',
             'walkInCustomer',
             'bankAccounts',
             'categories',
@@ -98,6 +92,247 @@ class PosSaleController extends Controller
             'posAutoPrintReceipt',
             'defaultBillCustomerName'
         ));
+    }
+
+    /**
+     * Paginated product search for the POS grid (AJAX).
+     */
+    public function searchProducts(Request $request)
+    {
+        $companyId = auth()->user()->company_id;
+        $locationId = session('location_id');
+        $branchId = session('branch_id') ?? (auth()->user()->branch_id ?? null);
+        $search = trim((string) $request->input('search', ''));
+        $category = trim((string) $request->input('category', ''));
+        $page = max(1, (int) $request->input('page', 1));
+        $perPage = min(100, max(12, (int) $request->input('per_page', 48)));
+
+        $query = InventoryItem::query()
+            ->where('company_id', $companyId)
+            ->where('is_active', true);
+
+        if ($search !== '') {
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', '%' . $search . '%')
+                    ->orWhere('code', 'like', '%' . $search . '%');
+            });
+        }
+
+        if ($category !== '') {
+            $query->whereHas('category', function ($q) use ($category) {
+                $q->where('name', $category);
+            });
+        }
+
+        $paginator = $query
+            ->with(['category:id,name'])
+            ->orderBy('name')
+            ->paginate($perPage, ['*'], 'page', $page);
+
+        $stockService = new \App\Services\InventoryStockService();
+        $itemIds = $paginator->getCollection()->pluck('id')->all();
+        $stockMap = $locationId ? $stockService->getStockMapAtLocation($locationId, $itemIds) : [];
+        $expiryMap = $locationId ? $stockService->getEarliestExpiryMapAtLocation($locationId, $itemIds) : [];
+
+        $this->resolvePosProductPrices($paginator->getCollection(), $branchId, $locationId);
+
+        $defaultVatType = 'no_vat';
+        $defaultVatRate = 0.00;
+
+        $products = $paginator->getCollection()
+            ->map(fn ($item) => $this->formatPosProductPayload(
+                $item,
+                $stockMap[$item->id] ?? 0.0,
+                $expiryMap[$item->id] ?? null,
+                $defaultVatType,
+                $defaultVatRate
+            ))
+            ->values();
+
+        return response()->json([
+            'products' => $products,
+            'pagination' => [
+                'current_page' => $paginator->currentPage(),
+                'last_page' => $paginator->lastPage(),
+                'per_page' => $paginator->perPage(),
+                'total' => $paginator->total(),
+                'has_more' => $paginator->hasMorePages(),
+            ],
+        ]);
+    }
+
+    /**
+     * Find a single POS product by exact item code (for barcode / QR fallback).
+     */
+    public function findProductByCode(Request $request)
+    {
+        $code = trim((string) $request->input('code', ''));
+        if ($code === '') {
+            return response()->json(['error' => 'Code is required'], 422);
+        }
+
+        $companyId = auth()->user()->company_id;
+        $locationId = session('location_id');
+        $branchId = session('branch_id') ?? (auth()->user()->branch_id ?? null);
+
+        $item = InventoryItem::query()
+            ->where('company_id', $companyId)
+            ->where('is_active', true)
+            ->whereRaw('LOWER(code) = ?', [mb_strtolower($code)])
+            ->with(['category:id,name'])
+            ->first();
+
+        if (!$item) {
+            return response()->json(['error' => 'Item not found'], 404);
+        }
+
+        $stockService = new \App\Services\InventoryStockService();
+        $stock = $locationId ? ($stockService->getStockMapAtLocation($locationId, [$item->id])[$item->id] ?? 0.0) : 0.0;
+        $expiryMap = $locationId ? $stockService->getEarliestExpiryMapAtLocation($locationId, [$item->id]) : [];
+        $this->resolvePosProductPrices(collect([$item]), $branchId, $locationId);
+
+        return response()->json([
+            'product' => $this->formatPosProductPayload(
+                $item,
+                $stock,
+                $expiryMap[$item->id] ?? null,
+                'no_vat',
+                0.00
+            ),
+        ]);
+    }
+
+    /**
+     * Today's POS bills created by the current user (bill mode).
+     */
+    public function todayBills(Request $request)
+    {
+        $branchId = session('branch_id') ?? (Auth::user()->branch_id ?? null);
+        $autoPrint = (bool) SystemSetting::getValue('pos_auto_print_receipt', true);
+
+        $bills = SalesInvoice::query()
+            ->where('reference_no', PosBillService::REFERENCE_NO)
+            ->where('created_by', Auth::id())
+            ->when($branchId, fn ($q) => $q->where('branch_id', $branchId))
+            ->whereDate('invoice_date', today())
+            ->with(['customer:id,name'])
+            ->orderByDesc('invoice_date')
+            ->orderByDesc('id')
+            ->get();
+
+        $payload = $bills->map(function (SalesInvoice $bill) use ($autoPrint) {
+            $currency = strtoupper($bill->currency ?? 'TZS');
+            $balanceDue = (float) $bill->balance_due;
+            $isPaid = $balanceDue <= 0 || in_array($bill->status, ['paid', 'cancelled'], true);
+
+            return [
+                'encoded_id' => $bill->encoded_id,
+                'invoice_number' => $bill->invoice_number,
+                'customer_name' => $bill->customer->name ?? 'N/A',
+                'invoice_time' => format_datetime($bill->invoice_date ?? $bill->created_at, 'H:i'),
+                'invoice_date' => format_datetime($bill->invoice_date ?? $bill->created_at, 'M d, Y'),
+                'total_amount' => (float) $bill->total_amount,
+                'balance_due' => $balanceDue,
+                'currency' => $currency,
+                'is_paid' => $isPaid,
+                'status' => $isPaid ? 'paid' : 'unpaid',
+                'receipt_url' => $autoPrint ? route('sales.invoices.pos-receipt', $bill->encoded_id) : null,
+            ];
+        })->values();
+
+        return response()->json([
+            'bills' => $payload,
+            'count' => $payload->count(),
+        ]);
+    }
+
+    /**
+     * Resolve selling prices using eager-loaded branch/location price rows.
+     */
+    protected function resolvePosProductPrices($items, ?int $branchId, ?int $locationId): void
+    {
+        $collection = $items instanceof \Illuminate\Support\Collection ? $items : collect($items);
+        if ($collection->isEmpty()) {
+            return;
+        }
+
+        $collection->load([
+            'branchPrices' => function ($q) use ($branchId) {
+                if ($branchId) {
+                    $q->where('branch_id', $branchId);
+                } else {
+                    $q->whereRaw('1 = 0');
+                }
+            },
+            'locationPrices' => function ($q) use ($locationId) {
+                if ($locationId) {
+                    $q->where('location_id', $locationId);
+                } else {
+                    $q->whereRaw('1 = 0');
+                }
+            },
+        ]);
+
+        foreach ($collection as $item) {
+            $locationRow = $item->locationPrices->first();
+            if ($locationRow) {
+                $item->resolved_unit_price = (float) $locationRow->unit_price;
+                $item->resolved_wholesale_unit_price = $item->has_wholesale && $locationRow->wholesale_unit_price !== null
+                    ? (float) $locationRow->wholesale_unit_price
+                    : null;
+                continue;
+            }
+
+            $branchRow = $item->branchPrices->first();
+            if ($branchRow) {
+                $item->resolved_unit_price = (float) $branchRow->unit_price;
+                $item->resolved_wholesale_unit_price = $item->has_wholesale && $branchRow->wholesale_unit_price !== null
+                    ? (float) $branchRow->wholesale_unit_price
+                    : null;
+                continue;
+            }
+
+            $item->resolved_unit_price = (float) $item->unit_price;
+            $item->resolved_wholesale_unit_price = $item->has_wholesale
+                ? (float) ($item->wholesale_unit_price ?? 0)
+                : null;
+        }
+    }
+
+    /**
+     * Shape inventory item data for the POS product grid.
+     */
+    protected function formatPosProductPayload(
+        InventoryItem $item,
+        float $currentStock,
+        ?string $earliestExpiry,
+        string $defaultVatType,
+        float $defaultVatRate
+    ): array {
+        $itemType = $item->item_type ?? 'product';
+        $trackStock = (bool) ($item->track_stock ?? true);
+        $isOutOfStock = $itemType !== 'service' && $trackStock && $currentStock <= 0;
+        $unitPrice = (float) ($item->resolved_unit_price ?? $item->unit_price);
+        $wholesaleUnitPrice = $item->has_wholesale
+            ? (float) ($item->resolved_wholesale_unit_price ?? $item->wholesale_unit_price ?? 0)
+            : 0.0;
+
+        return [
+            'id' => $item->id,
+            'name' => $item->name,
+            'code' => $item->code,
+            'category' => $item->category->name ?? '',
+            'unit_price' => $unitPrice,
+            'wholesale_unit_price' => $wholesaleUnitPrice,
+            'has_wholesale' => (bool) $item->has_wholesale,
+            'current_stock' => $currentStock,
+            'item_type' => $itemType,
+            'track_stock' => $trackStock,
+            'is_out_of_stock' => $isOutOfStock,
+            'vat_type' => $defaultVatType,
+            'vat_rate' => $defaultVatRate,
+            'earliest_expiry' => $item->track_expiry ? $earliestExpiry : null,
+        ];
     }
 
     /**

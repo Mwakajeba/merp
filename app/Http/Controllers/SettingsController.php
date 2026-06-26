@@ -769,7 +769,7 @@ class SettingsController extends Controller
         $get = fn (string $key, $default = null) => SystemSetting::getValue($key, $default);
 
         $currentSettings = [
-            'pos_sale_mode' => (string) $get('pos_sale_mode', 'direct'),
+            'pos_bill_mode_enabled' => (string) $get('pos_sale_mode', 'direct') === 'bill',
             'pos_auto_print_receipt' => (bool) $get('pos_auto_print_receipt', true),
         ];
 
@@ -783,7 +783,7 @@ class SettingsController extends Controller
         }
 
         $request->validate([
-            'pos_sale_mode' => 'required|in:direct,bill',
+            'pos_bill_mode_enabled' => 'nullable|boolean',
             'pos_auto_print_receipt' => 'nullable|boolean',
         ]);
 
@@ -791,7 +791,8 @@ class SettingsController extends Controller
             SystemSetting::setValue($key, $value, $type, 'sales', $label);
         };
 
-        $set('pos_sale_mode', $request->input('pos_sale_mode'), 'string', 'POS Sale Mode');
+        $posSaleMode = $request->boolean('pos_bill_mode_enabled') ? 'bill' : 'direct';
+        $set('pos_sale_mode', $posSaleMode, 'string', 'POS Sale Mode');
         $set('pos_auto_print_receipt', $request->boolean('pos_auto_print_receipt'), 'boolean', 'Auto Print POS Receipt');
 
         return redirect()->route('settings.sales')->with('success', 'Sales settings updated successfully.');
@@ -996,7 +997,9 @@ class SettingsController extends Controller
 
                 if ($setting) {
                     // Handle different input types
-                    if ($setting->type === 'boolean') {
+                    if ($key === 'pos_sale_mode') {
+                        $value = ($value === 'bill' || (is_array($value) && in_array('bill', $value, true))) ? 'bill' : 'direct';
+                    } elseif ($setting->type === 'boolean') {
                         $value = $value === '1' || $value === 'true' || $value === 'on';
                     } elseif ($setting->type === 'integer') {
                         $value = (int) $value;

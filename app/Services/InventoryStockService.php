@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Inventory\Item;
 use App\Models\Inventory\Movement;
 use App\Models\Inventory\Location;
+use App\Models\Inventory\ExpiryTracking;
 use Illuminate\Support\Facades\DB;
 
 class InventoryStockService
@@ -370,19 +371,74 @@ class InventoryStockService
     {
         return Item::where('company_id', $companyId)
             ->where('is_active', true)
-            ->get()
-            ->filter(function ($item) use ($locationId) {
-                // For services or non-stock-tracked items, always include them
-                if ($item->item_type === 'service' || !$item->track_stock) {
-                    return true;
-                }
-                
-                // For products, include even when stock is 0 so they can be shown
-                // in the UI but disabled/faded when out of stock.
-                $stock = $this->getItemStockAtLocation($item->id, $locationId);
-                return $stock >= 0;
-            })
-            ->sortBy('name')
-            ->values();
+            ->with(['category:id,name'])
+            ->orderBy('name')
+            ->get();
+    }
+
+    /**
+     * Bulk stock levels for many items at one location (single query).
+     *
+     * @return array<int, float> item_id => current_stock
+     */
+    public function getStockMapAtLocation($locationId, ?array $itemIds = null): array
+    {
+        if (!$locationId) {
+            return [];
+        }
+
+        $query = Movement::where('location_id', $locationId);
+
+        if ($itemIds !== null) {
+            if ($itemIds === []) {
+                return [];
+            }
+            $query->whereIn('item_id', $itemIds);
+        }
+
+        return $query
+            ->selectRaw('
+                item_id,
+                SUM(CASE
+                    WHEN movement_type IN ("opening_balance", "transfer_in", "purchased", "adjustment_in")
+                    THEN quantity
+                    WHEN movement_type IN ("transfer_out", "sold", "adjustment_out", "write_off")
+                    THEN -quantity
+                    ELSE 0
+                END) as current_stock
+            ')
+            ->groupBy('item_id')
+            ->pluck('current_stock', 'item_id')
+            ->map(fn ($stock) => (float) $stock)
+            ->all();
+    }
+
+    /**
+     * Earliest available expiry date per item at a location (single query).
+     *
+     * @return array<int, string> item_id => expiry_date (Y-m-d)
+     */
+    public function getEarliestExpiryMapAtLocation($locationId, ?array $itemIds = null): array
+    {
+        if (!$locationId) {
+            return [];
+        }
+
+        $query = ExpiryTracking::forLocation($locationId)
+            ->available()
+            ->select('item_id', DB::raw('MIN(expiry_date) as earliest_expiry'))
+            ->groupBy('item_id');
+
+        if ($itemIds !== null) {
+            if ($itemIds === []) {
+                return [];
+            }
+            $query->whereIn('item_id', $itemIds);
+        }
+
+        return $query
+            ->pluck('earliest_expiry', 'item_id')
+            ->map(fn ($date) => (string) $date)
+            ->all();
     }
 }

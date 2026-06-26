@@ -420,6 +420,24 @@
                                                                    value="{{ $setting->value }}"
                                                                    title="Choose color"
                                                                    @cannot('edit system configurations') disabled @endcannot>
+                                                        @elseif($setting->key === 'pos_sale_mode')
+                                                            <input type="hidden" name="settings[pos_sale_mode]" value="direct">
+                                                            <div class="form-check form-switch">
+                                                                <input class="form-check-input"
+                                                                       type="checkbox"
+                                                                       role="switch"
+                                                                       id="{{ $setting->key }}"
+                                                                       name="settings[pos_sale_mode]"
+                                                                       value="bill"
+                                                                       {{ $setting->value === 'bill' ? 'checked' : '' }}
+                                                                       @cannot('edit system configurations') disabled @endcannot>
+                                                                <label class="form-check-label" for="{{ $setting->key }}">
+                                                                    Bill POS sale (off = direct sale)
+                                                                </label>
+                                                            </div>
+                                                            @if($setting->description)
+                                                                <small class="text-muted d-block mt-1">{{ $setting->description }}</small>
+                                                            @endif
                                                         @elseif(in_array($setting->key, ['document_margin_top','document_margin_right','document_margin_bottom','document_margin_left']))
                                                             <input type="text" 
                                                                    class="form-control" 
