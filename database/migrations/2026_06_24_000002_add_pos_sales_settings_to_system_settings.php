@@ -14,7 +14,7 @@ return new class extends Migration
                 'type' => 'string',
                 'group' => 'sales',
                 'label' => 'POS Sale Mode',
-                'description' => 'direct = immediate cash sale (supermarket). bill = create unpaid invoice first (restaurant), pay at cashier.',
+                'description' => 'Off = direct sale (pay immediately). On = bill mode (create unpaid bill, pay at cashier).',
                 'is_public' => false,
             ]
         );

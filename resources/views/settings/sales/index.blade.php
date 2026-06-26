@@ -37,34 +37,23 @@
                                     <h5 class="mb-0"><i class="bx bx-store me-2"></i>POS Sale Mode</h5>
                                 </div>
                                 <div class="card-body">
-                                    <p class="text-muted">
-                                        Choose how your business uses the POS. Supermarkets typically use direct sale (pay immediately).
-                                        Restaurants often create a bill first and collect payment at the cashier later.
-                                    </p>
-
-                                    <div class="form-check mb-3 p-3 border rounded {{ old('pos_sale_mode', $currentSettings['pos_sale_mode']) === 'direct' ? 'border-primary bg-light' : '' }}">
-                                        <input class="form-check-input" type="radio" name="pos_sale_mode" id="pos_mode_direct" value="direct"
-                                            {{ old('pos_sale_mode', $currentSettings['pos_sale_mode']) === 'direct' ? 'checked' : '' }}>
-                                        <label class="form-check-label w-100" for="pos_mode_direct">
-                                            <strong>Direct POS Sale</strong>
-                                            <div class="text-muted small mt-1">
-                                                Complete sale and payment at once (supermarket / retail). Creates a POS sale record immediately.
-                                            </div>
-                                        </label>
-                                    </div>
-
-                                    <div class="form-check p-3 border rounded {{ old('pos_sale_mode', $currentSettings['pos_sale_mode']) === 'bill' ? 'border-primary bg-light' : '' }}">
-                                        <input class="form-check-input" type="radio" name="pos_sale_mode" id="pos_mode_bill" value="bill"
-                                            {{ old('pos_sale_mode', $currentSettings['pos_sale_mode']) === 'bill' ? 'checked' : '' }}>
-                                        <label class="form-check-label w-100" for="pos_mode_bill">
+                                    <div class="form-check form-switch mb-3">
+                                        <input type="hidden" name="pos_bill_mode_enabled" value="0">
+                                        <input class="form-check-input" type="checkbox" role="switch" id="pos_bill_mode_enabled"
+                                            name="pos_bill_mode_enabled" value="1"
+                                            {{ old('pos_bill_mode_enabled', $currentSettings['pos_bill_mode_enabled']) ? 'checked' : '' }}>
+                                        <label class="form-check-label" for="pos_bill_mode_enabled">
                                             <strong>Bill POS Sale</strong>
-                                            <div class="text-muted small mt-1">
-                                                Waiter creates an unpaid bill (sales invoice). Walk-in guests are saved as customers.
-                                                Cashier clears open bills and records payment separately.
-                                            </div>
                                         </label>
                                     </div>
-                                    @error('pos_sale_mode')
+                                    <p class="text-muted small mb-2">
+                                        <strong>Off:</strong> Direct POS sale — complete sale and payment at once (supermarket / retail).
+                                    </p>
+                                    <p class="text-muted small mb-0">
+                                        <strong>On:</strong> Bill POS sale — create an unpaid bill first; cashier collects payment later (restaurant / table service).
+                                        Walk-in guests are saved as customers. Use the cashier screen to clear open bills.
+                                    </p>
+                                    @error('pos_bill_mode_enabled')
                                     <div class="text-danger small mt-2">{{ $message }}</div>
                                     @enderror
                                 </div>

@@ -129,6 +129,21 @@
     padding: 10px;
     background-color: #f8f9fa;
 }
+
+.pos-panel-tabs .nav-link {
+    font-size: 0.85rem;
+    padding: 0.35rem 0.75rem;
+}
+
+.today-bill-card {
+    transition: all 0.2s ease;
+    border: 1px solid #e9ecef;
+}
+
+.today-bill-card:hover {
+    border-color: #0d6efd;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+}
 </style>
 @endpush
 
@@ -158,108 +173,80 @@
             <!-- Product Grid -->
             <div class="col-lg-7">
                 <div class="card">
-                    <div class="card-header d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0">Products</h5>
-                        <div class="d-flex gap-2 align-items-center">
-                            <div class="position-relative">
-                                <button type="button" class="btn btn-sm btn-primary" id="btnScanQR" title="Scan QR Code with Camera">
-                                    <i class="bx bx-qr-scan me-1"></i> Scan QR
-                                </button>
-                                <input type="text" id="qrScannerInput" class="form-control form-control-sm d-none" placeholder="Or type/paste QR data..." style="width: 200px;" autocomplete="off">
+                    <div class="card-header">
+                        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 w-100">
+                            @if(($posSaleMode ?? 'direct') === 'bill')
+                            <ul class="nav nav-pills pos-panel-tabs mb-0" id="productsPanelTabs">
+                                <li class="nav-item">
+                                    <button type="button" class="nav-link active" id="tabProducts" data-panel="products">
+                                        <i class="bx bx-package me-1"></i> Products
+                                    </button>
+                                </li>
+                                <li class="nav-item">
+                                    <button type="button" class="nav-link" id="tabTodayBills" data-panel="today-bills">
+                                        <i class="bx bx-receipt me-1"></i> My Today's Bills
+                                        <span class="badge bg-primary ms-1" id="todayBillsCount">0</span>
+                                    </button>
+                                </li>
+                            </ul>
+                            @else
+                            <h5 class="mb-0">Products</h5>
+                            @endif
+                            <div class="d-flex gap-2 align-items-center" id="productFilters">
+                                <div class="position-relative">
+                                    <button type="button" class="btn btn-sm btn-primary" id="btnScanQR" title="Scan QR Code with Camera">
+                                        <i class="bx bx-qr-scan me-1"></i> Scan QR
+                                    </button>
+                                    <input type="text" id="qrScannerInput" class="form-control form-control-sm d-none" placeholder="Or type/paste QR data..." style="width: 200px;" autocomplete="off">
+                                </div>
+                                <input type="text" id="searchInput" class="form-control form-control-sm" placeholder="Search products..." style="width: 200px;">
+                                <select id="categoryFilter" class="form-control form-control-sm" style="width: 150px;">
+                                    <option value="">All Categories</option>
+                                    @foreach($categories as $category)
+                                        <option value="{{ $category->name }}">{{ $category->name }}</option>
+                                    @endforeach
+                                </select>
                             </div>
-                            <input type="text" id="searchInput" class="form-control form-control-sm" placeholder="Search products..." style="width: 200px;">
-                            <select id="categoryFilter" class="form-control form-control-sm" style="width: 150px;">
-                                <option value="">All Categories</option>
-                                @foreach($categories as $category)
-                                    <option value="{{ $category->name }}">{{ $category->name }}</option>
-                                @endforeach
-                            </select>
                         </div>
                     </div>
                     <div class="card-body">
+                        <div id="productsPanel">
                         <div class="products-scroll-container" style="height: 500px; overflow-y: auto; border: 1px solid #e9ecef; border-radius: 8px; padding: 15px;">
-                            <div class="row" id="productGrid">
-                                @foreach($inventoryItems as $item)
-                                @php
-                                    $stockService = new \App\Services\InventoryStockService();
-                                    // For service items, don't check stock
-                                    $currentStock = 0;
-                                    if ($item->item_type !== 'service' && $item->track_stock) {
-                                        $currentStock = $stockService->getItemStockAtLocation($item->id, session('location_id'));
-                                    }
-                                    $itemType = $item->item_type ?? 'product';
-                                    $trackStock = $item->track_stock ?? true;
-                                    $isOutOfStock = $itemType !== 'service' && $trackStock && $currentStock <= 0;
-                                    
-                                    // Get earliest expiry date for this item at location
-                                    $earliestExpiry = null;
-                                    if ($item->track_expiry && session('location_id')) {
-                                        $earliestExpiry = \App\Models\Inventory\ExpiryTracking::forItem($item->id)
-                                            ->forLocation(session('location_id'))
-                                            ->available()
-                                            ->orderByExpiry('asc')
-                                            ->value('expiry_date');
-                                    }
-                                @endphp
-                                <div class="col-6 col-md-4 col-lg-2 col-xl-2 mb-3 product-item" 
-                                     data-id="{{ $item->id }}" 
-                                     data-name="{{ strtolower($item->name) }}" 
-                                     data-code="{{ strtolower($item->code) }}"
-                                     data-category="{{ $item->category->name ?? '' }}">
-                                    <div class="card h-100 product-card {{ $isOutOfStock ? 'product-card-disabled' : 'product-card-clickable' }}"
-                                        @unless($isOutOfStock)
-                                            onclick="showItemModal({{ $item->id }}, {{ json_encode($item->name) }}, {{ $item->resolved_unit_price ?? $item->unit_price }}, {{ $currentStock }}, {{ json_encode($defaultVatType) }}, {{ $defaultVatRate }}, {{ json_encode($itemType) }}, {{ $trackStock ? 'true' : 'false' }}, {{ $item->has_wholesale ? 'true' : 'false' }}, {{ $item->has_wholesale ? ($item->resolved_wholesale_unit_price ?? $item->wholesale_unit_price ?? 0) : 0 }})"
-                                        @endunless
-                                    >
-                                        <div class="card-body text-center p-2">
-                                            <div class="mb-1">
-                                                <i class="bx bx-package fs-4 text-primary"></i>
-                                            </div>
-                                            <h6 class="mb-1" style="font-size: 0.8rem; line-height: 1.2;">{{ $item->name }}</h6>
-                                            <small class="text-muted" style="font-size: 0.7rem;">{{ $item->code }}</small>
-                                            <div class="mt-1">
-                                                <span class="badge bg-success" style="font-size: 0.7rem;">{{ number_format($item->resolved_unit_price ?? $item->unit_price, 0) }} TZS</span>
-                                            </div>
-                                            <div class="mt-1">
-                                                @if($item->item_type === 'service' || !$item->track_stock)
-                                                    <small class="text-muted" style="font-size: 0.65rem;">Service</small>
-                                                @else
-                                                    @if($isOutOfStock)
-                                                        <small class="text-danger fw-semibold" style="font-size: 0.65rem;">Out of stock</small>
-                                                @else
-                                                    <small class="text-muted" style="font-size: 0.65rem;">Stock: {{ $currentStock }}</small>
-                                                    @endif
-                                                @endif
-                                            </div>
-                                            @if($earliestExpiry)
-                                            <div class="mt-1">
-                                                @php
-                                                    $daysUntilExpiry = now()->diffInDays($earliestExpiry, false);
-                                                    $badgeClass = 'bg-secondary';
-                                                    if ($daysUntilExpiry < 0) {
-                                                        $badgeClass = 'bg-danger';
-                                                    } elseif ($daysUntilExpiry <= 30) {
-                                                        $badgeClass = 'bg-warning';
-                                                    } else {
-                                                        $badgeClass = 'bg-info';
-                                                    }
-                                                @endphp
-                                                <span class="badge {{ $badgeClass }}" style="font-size: 0.65rem;" title="Earliest expiry date">
-                                                    <i class="bx bx-calendar me-1"></i>{{ $earliestExpiry->format('M d, Y') }}
-                                                </span>
-                                            </div>
-                                            @endif
-                                            @if($item->category)
-                                            <div class="mt-1">
-                                                <small class="text-muted" style="font-size: 0.65rem;">{{ $item->category->name }}</small>
-                                            </div>
-                                            @endif
-                                        </div>
-                                    </div>
+                            <div class="row" id="productGrid"></div>
+                            <div id="productGridLoading" class="text-center py-4">
+                                <div class="spinner-border text-primary" role="status">
+                                    <span class="visually-hidden">Loading...</span>
                                 </div>
-                                @endforeach
+                                <p class="text-muted mt-2 mb-0">Loading products...</p>
+                            </div>
+                            <div id="productGridEmpty" class="text-center py-4 d-none">
+                                <i class="bx bx-package fs-1 text-muted"></i>
+                                <p class="text-muted mt-2 mb-0">No products found</p>
+                            </div>
+                            <div id="productGridLoadMore" class="text-center py-2 d-none">
+                                <div class="spinner-border spinner-border-sm text-primary" role="status">
+                                    <span class="visually-hidden">Loading more...</span>
+                                </div>
                             </div>
                         </div>
+                        </div>
+                        @if(($posSaleMode ?? 'direct') === 'bill')
+                        <div id="todayBillsPanel" class="d-none">
+                            <div class="products-scroll-container" style="height: 500px; overflow-y: auto; border: 1px solid #e9ecef; border-radius: 8px; padding: 15px;">
+                                <div id="todayBillsLoading" class="text-center py-4">
+                                    <div class="spinner-border text-primary" role="status">
+                                        <span class="visually-hidden">Loading...</span>
+                                    </div>
+                                    <p class="text-muted mt-2 mb-0">Loading today's bills...</p>
+                                </div>
+                                <div id="todayBillsList" class="row g-2"></div>
+                                <div id="todayBillsEmpty" class="text-center py-4 d-none">
+                                    <i class="bx bx-receipt fs-1 text-muted"></i>
+                                    <p class="text-muted mt-2 mb-0">No bills created today</p>
+                                </div>
+                            </div>
+                        </div>
+                        @endif
                     </div>
                 </div>
             </div>
@@ -591,47 +578,371 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
-// Global variables for filtering
-let allProducts = [];
+// POS product grid (server-side pagination)
+const posProductsConfig = {
+    url: @json(route('sales.pos.products')),
+    findByCodeUrl: @json(route('sales.pos.products.by-code')),
+    defaultVatType: @json($defaultVatType),
+    defaultVatRate: {{ $defaultVatRate }},
+    perPage: 48,
+};
 
-// Initialize products array
+let posProductsState = {
+    page: 1,
+    hasMore: true,
+    loading: false,
+    search: '',
+    category: '',
+    searchTimer: null,
+};
+
+function escapeHtml(value) {
+    return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+function formatExpiryBadge(expiryDate) {
+    if (!expiryDate) {
+        return '';
+    }
+
+    const expiry = new Date(expiryDate + 'T00:00:00');
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const daysUntilExpiry = Math.round((expiry - today) / (1000 * 60 * 60 * 24));
+
+    let badgeClass = 'bg-info';
+    if (daysUntilExpiry < 0) {
+        badgeClass = 'bg-danger';
+    } else if (daysUntilExpiry <= 30) {
+        badgeClass = 'bg-warning';
+    }
+
+    const formatted = expiry.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+
+    return `<div class="mt-1">
+        <span class="badge ${badgeClass}" style="font-size: 0.65rem;" title="Earliest expiry date">
+            <i class="bx bx-calendar me-1"></i>${formatted}
+        </span>
+    </div>`;
+}
+
+function buildProductCard(product) {
+    const isService = product.item_type === 'service' || !product.track_stock;
+    const stockHtml = isService
+        ? '<small class="text-muted" style="font-size: 0.65rem;">Service</small>'
+        : (product.is_out_of_stock
+            ? '<small class="text-danger fw-semibold" style="font-size: 0.65rem;">Out of stock</small>'
+            : `<small class="text-muted" style="font-size: 0.65rem;">Stock: ${product.current_stock}</small>`);
+
+    const cardClass = product.is_out_of_stock ? 'product-card-disabled' : 'product-card-clickable';
+    const clickHandler = product.is_out_of_stock
+        ? ''
+        : `onclick="showItemModal(${product.id}, ${JSON.stringify(product.name)}, ${product.unit_price}, ${product.current_stock}, ${JSON.stringify(product.vat_type)}, ${product.vat_rate}, ${JSON.stringify(product.item_type)}, ${product.track_stock ? 'true' : 'false'}, ${product.has_wholesale ? 'true' : 'false'}, ${product.wholesale_unit_price || 0})"`;
+
+    const categoryHtml = product.category
+        ? `<div class="mt-1"><small class="text-muted" style="font-size: 0.65rem;">${escapeHtml(product.category)}</small></div>`
+        : '';
+
+    return `<div class="col-6 col-md-4 col-lg-2 col-xl-2 mb-3 product-item"
+        data-id="${product.id}"
+        data-name="${escapeHtml((product.name || '').toLowerCase())}"
+        data-code="${escapeHtml((product.code || '').toLowerCase())}"
+        data-category="${escapeHtml(product.category)}">
+        <div class="card h-100 product-card ${cardClass}" ${clickHandler}>
+            <div class="card-body text-center p-2">
+                <div class="mb-1"><i class="bx bx-package fs-4 text-primary"></i></div>
+                <h6 class="mb-1" style="font-size: 0.8rem; line-height: 1.2;">${escapeHtml(product.name)}</h6>
+                <small class="text-muted" style="font-size: 0.7rem;">${escapeHtml(product.code)}</small>
+                <div class="mt-1">
+                    <span class="badge bg-success" style="font-size: 0.7rem;">${Number(product.unit_price).toLocaleString('en-US', { maximumFractionDigits: 0 })} TZS</span>
+                </div>
+                <div class="mt-1">${stockHtml}</div>
+                ${formatExpiryBadge(product.earliest_expiry)}
+                ${categoryHtml}
+            </div>
+        </div>
+    </div>`;
+}
+
+function setProductGridLoading(isInitial, show) {
+    const loadingEl = document.getElementById('productGridLoading');
+    const loadMoreEl = document.getElementById('productGridLoadMore');
+    if (isInitial) {
+        loadingEl.classList.toggle('d-none', !show);
+    } else {
+        loadMoreEl.classList.toggle('d-none', !show);
+    }
+}
+
+function setProductGridEmpty(show) {
+    document.getElementById('productGridEmpty').classList.toggle('d-none', !show);
+}
+
+async function loadPosProducts(reset = false) {
+    if (posProductsState.loading) {
+        return;
+    }
+    if (!reset && !posProductsState.hasMore) {
+        return;
+    }
+
+    if (reset) {
+        posProductsState.page = 1;
+        posProductsState.hasMore = true;
+        document.getElementById('productGrid').innerHTML = '';
+        setProductGridEmpty(false);
+    }
+
+    posProductsState.loading = true;
+    setProductGridLoading(reset, true);
+
+    const params = new URLSearchParams({
+        page: String(posProductsState.page),
+        per_page: String(posProductsConfig.perPage),
+        search: posProductsState.search,
+        category: posProductsState.category,
+    });
+
+    try {
+        const response = await fetch(`${posProductsConfig.url}?${params.toString()}`, {
+            headers: {
+                'Accept': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to load products');
+        }
+
+        const data = await response.json();
+        const grid = document.getElementById('productGrid');
+
+        if (reset) {
+            grid.innerHTML = '';
+        }
+
+        const html = (data.products || []).map(buildProductCard).join('');
+        grid.insertAdjacentHTML('beforeend', html);
+
+        const pagination = data.pagination || {};
+        posProductsState.hasMore = !!pagination.has_more;
+        posProductsState.page = (pagination.current_page || posProductsState.page) + 1;
+
+        setProductGridEmpty((pagination.total || 0) === 0);
+    } catch (error) {
+        console.error(error);
+        if (reset) {
+            setProductGridEmpty(true);
+        }
+    } finally {
+        posProductsState.loading = false;
+        setProductGridLoading(reset, false);
+        setProductGridLoading(false, false);
+    }
+}
+
+function schedulePosProductSearch() {
+    clearTimeout(posProductsState.searchTimer);
+    posProductsState.searchTimer = setTimeout(() => loadPosProducts(true), 300);
+}
+
 document.addEventListener('DOMContentLoaded', function() {
-    allProducts = Array.from(document.querySelectorAll('.product-item'));
+    loadPosProducts(true);
+
+    const scrollContainer = document.querySelector('#productsPanel .products-scroll-container');
+    if (scrollContainer) {
+        scrollContainer.addEventListener('scroll', function() {
+            if (scrollContainer.scrollTop + scrollContainer.clientHeight >= scrollContainer.scrollHeight - 120) {
+                loadPosProducts(false);
+            }
+        });
+    }
 });
 
-// Search functionality
 document.getElementById('searchInput').addEventListener('input', function() {
-    const searchTerm = this.value.toLowerCase();
-    const productItems = document.querySelectorAll('.product-item');
-    
-    productItems.forEach(item => {
-        const name = item.dataset.name;
-        const code = item.dataset.code;
-        const category = item.dataset.category;
-        
-        if (name.includes(searchTerm) || code.includes(searchTerm) || category.includes(searchTerm)) {
-            item.style.display = 'block';
-        } else {
-            item.style.display = 'none';
-        }
-    });
+    posProductsState.search = this.value.trim();
+    schedulePosProductSearch();
 });
 
-// Category filter
 document.getElementById('categoryFilter').addEventListener('change', function() {
-    const selectedCategory = this.value.toLowerCase();
-    const productItems = document.querySelectorAll('.product-item');
-    
-    productItems.forEach(item => {
-        const category = item.dataset.category.toLowerCase();
-        
-        if (!selectedCategory || category === selectedCategory) {
-            item.style.display = 'block';
-        } else {
-            item.style.display = 'none';
-        }
-    });
+    posProductsState.category = this.value;
+    loadPosProducts(true);
 });
+
+async function openPosProductByCode(code) {
+    const params = new URLSearchParams({ code });
+    const response = await fetch(`${posProductsConfig.findByCodeUrl}?${params.toString()}`, {
+        headers: {
+            'Accept': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest',
+        },
+    });
+
+    if (!response.ok) {
+        return false;
+    }
+
+    const data = await response.json();
+    const product = data.product;
+    if (!product || product.is_out_of_stock) {
+        return false;
+    }
+
+    showItemModal(
+        product.id,
+        product.name,
+        product.unit_price,
+        product.current_stock,
+        product.vat_type,
+        product.vat_rate,
+        product.item_type,
+        product.track_stock,
+        product.has_wholesale,
+        product.wholesale_unit_price || 0
+    );
+
+    return true;
+}
+
+// Today's bills (bill mode)
+const todayBillsConfig = posSaleMode === 'bill' ? {
+    url: @json(route('sales.pos.today-bills')),
+} : null;
+
+let todayBillsLoaded = false;
+
+function formatMoney(amount, currency) {
+    return Number(amount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ' + (currency || 'TZS');
+}
+
+function buildTodayBillCard(bill) {
+    const statusBadge = bill.is_paid
+        ? '<span class="badge bg-success">Paid</span>'
+        : '<span class="badge bg-warning text-dark">Unpaid</span>';
+
+    const printBtn = bill.receipt_url
+        ? `<a href="${bill.receipt_url}" class="btn btn-sm btn-outline-secondary" target="_blank" title="Print bill">
+                <i class="bx bx-printer"></i>
+           </a>`
+        : '';
+
+    return `<div class="col-12 col-md-6">
+        <div class="card today-bill-card h-100">
+            <div class="card-body p-3">
+                <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
+                    <div>
+                        <div class="fw-bold text-primary">${escapeHtml(bill.invoice_number)}</div>
+                        <div class="small text-muted">${escapeHtml(bill.invoice_time)} · ${escapeHtml(bill.invoice_date)}</div>
+                    </div>
+                    ${statusBadge}
+                </div>
+                <div class="mb-2">
+                    <i class="bx bx-user me-1 text-muted"></i>
+                    <span class="fw-semibold">${escapeHtml(bill.customer_name)}</span>
+                </div>
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <small class="text-muted d-block">Total</small>
+                        <span class="fw-bold">${formatMoney(bill.total_amount, bill.currency)}</span>
+                    </div>
+                    <div class="text-end">
+                        <small class="text-muted d-block">Balance</small>
+                        <span class="fw-bold ${bill.is_paid ? 'text-success' : 'text-danger'}">${formatMoney(bill.balance_due, bill.currency)}</span>
+                    </div>
+                    <div>${printBtn}</div>
+                </div>
+            </div>
+        </div>
+    </div>`;
+}
+
+async function loadTodayBills(force = false) {
+    if (!todayBillsConfig) {
+        return;
+    }
+    if (todayBillsLoaded && !force) {
+        return;
+    }
+
+    const loadingEl = document.getElementById('todayBillsLoading');
+    const listEl = document.getElementById('todayBillsList');
+    const emptyEl = document.getElementById('todayBillsEmpty');
+    const countEl = document.getElementById('todayBillsCount');
+
+    if (!loadingEl || !listEl) {
+        return;
+    }
+
+    loadingEl.classList.remove('d-none');
+    emptyEl.classList.add('d-none');
+    listEl.innerHTML = '';
+
+    try {
+        const response = await fetch(todayBillsConfig.url, {
+            headers: {
+                'Accept': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to load bills');
+        }
+
+        const data = await response.json();
+        const bills = data.bills || [];
+
+        if (countEl) {
+            countEl.textContent = String(data.count ?? bills.length);
+        }
+
+        if (bills.length === 0) {
+            emptyEl.classList.remove('d-none');
+        } else {
+            listEl.innerHTML = bills.map(buildTodayBillCard).join('');
+        }
+
+        todayBillsLoaded = true;
+    } catch (error) {
+        console.error(error);
+        emptyEl.classList.remove('d-none');
+        emptyEl.querySelector('p').textContent = 'Failed to load today\'s bills';
+    } finally {
+        loadingEl.classList.add('d-none');
+    }
+}
+
+function switchProductsPanel(panel) {
+    const productsPanel = document.getElementById('productsPanel');
+    const todayBillsPanel = document.getElementById('todayBillsPanel');
+    const productFilters = document.getElementById('productFilters');
+    const tabProducts = document.getElementById('tabProducts');
+    const tabTodayBills = document.getElementById('tabTodayBills');
+
+    const showProducts = panel === 'products';
+
+    if (productsPanel) productsPanel.classList.toggle('d-none', !showProducts);
+    if (todayBillsPanel) todayBillsPanel.classList.toggle('d-none', showProducts);
+    if (productFilters) productFilters.classList.toggle('d-none', !showProducts);
+    if (tabProducts) tabProducts.classList.toggle('active', showProducts);
+    if (tabTodayBills) tabTodayBills.classList.toggle('active', !showProducts);
+
+    if (!showProducts) {
+        loadTodayBills(true);
+    }
+}
+
+if (posSaleMode === 'bill') {
+    document.getElementById('tabProducts')?.addEventListener('click', () => switchProductsPanel('products'));
+    document.getElementById('tabTodayBills')?.addEventListener('click', () => switchProductsPanel('today-bills'));
+    loadTodayBills(true);
+}
 
 // QR Code Scanner Variables
 let qrScanTimeout;
@@ -711,28 +1022,15 @@ function processQRCodeData(qrData) {
         }
     } catch (e) {
         // Not valid JSON, might be a barcode or other format
-        // Try to find item by code
-        const productItems = document.querySelectorAll('.product-item');
-        let found = false;
-        
-        productItems.forEach(item => {
-            const code = item.dataset.code.toLowerCase();
-            if (code === qrData.toLowerCase()) {
-                // Found item by code, trigger click
-                const card = item.querySelector('.product-card-clickable');
-                if (card && !card.classList.contains('product-card-disabled')) {
-                    // Close scanner modal
-                    const scannerModal = bootstrap.Modal.getInstance(document.getElementById('qrScannerModal'));
-                    if (scannerModal) {
-                        scannerModal.hide();
-                    }
-                    card.click();
-                    found = true;
+        openPosProductByCode(qrData).then((found) => {
+            if (found) {
+                const scannerModal = bootstrap.Modal.getInstance(document.getElementById('qrScannerModal'));
+                if (scannerModal) {
+                    scannerModal.hide();
                 }
+                return;
             }
-        });
-        
-        if (!found) {
+
             Swal.fire({
                 icon: 'error',
                 title: 'Item Not Found',
@@ -740,9 +1038,8 @@ function processQRCodeData(qrData) {
                 timer: 2000,
                 showConfirmButton: false
             });
-            return false;
-        }
-        return true;
+        });
+        return false;
     }
 }
 
@@ -1908,6 +2205,8 @@ function processSale() {
                     const billNameInput = document.getElementById('billCustomerName');
                     if (billNameInput) billNameInput.value = defaultBillCustomerName;
                     selectCustomer(0, defaultBillCustomerName);
+                    todayBillsLoaded = false;
+                    loadTodayBills(true);
                 }
                 document.getElementById('cartDiscountType').value = 'none';
                 document.getElementById('cartDiscountRate').value = 0;

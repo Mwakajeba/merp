@@ -1677,6 +1677,9 @@ Route::prefix('sales')->name('sales.')->middleware(['auth', 'company.scope', 'ch
     Route::resource('cash-sales', CashSaleController::class);
 
     // POS Sales Routes
+    Route::get('pos/products', [PosSaleController::class, 'searchProducts'])->name('pos.products');
+    Route::get('pos/products/by-code', [PosSaleController::class, 'findProductByCode'])->name('pos.products.by-code');
+    Route::get('pos/today-bills', [PosSaleController::class, 'todayBills'])->name('pos.today-bills');
     Route::get('pos', [PosSaleController::class, 'index'])->name('pos.index');
     Route::post('pos', [PosSaleController::class, 'store'])->name('pos.store');
     Route::get('pos/cashier', [PosSaleController::class, 'cashier'])->name('pos.cashier');
