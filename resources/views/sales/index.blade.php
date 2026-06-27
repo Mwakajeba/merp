@@ -33,7 +33,7 @@
                             $unpaidPosBillsCount = $posSaleMode === 'bill' ? $unpaidBillsQuery->count() : 0;
                             $posListCountQuery = \App\Models\Sales\PosSale::query()
                                 ->when($branchId, fn ($q) => $q->where('branch_id', $branchId));
-                            $posListCount = $posListCountQuery->visibleToUser()->count();
+                            $posListCount = $posSaleMode === 'bill' ? 0 : $posListCountQuery->visibleToUser()->count();
                         @endphp
                         <div class="row">
                             <div class="col-md-6 col-lg-3 mb-4">
@@ -130,6 +130,7 @@
                             </div>
                             @endif
 
+                            @if($posSaleMode !== 'bill')
                             <div class="col-md-6 col-lg-3 mb-4">
                                 <div class="card border-dark position-relative h-100">
                                     <div class="card-body text-center">
@@ -153,6 +154,7 @@
                                     </div>
                                 </div>
                             </div>
+                            @endif
                         </div>
                     </div>
                 </div>

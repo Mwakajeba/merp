@@ -31,6 +31,11 @@ return new class extends Migration
             $admin->givePermissionTo($this->permissions);
         }
 
+        $superAdmin = Role::where('name', 'super-admin')->where('guard_name', 'web')->first();
+        if ($superAdmin) {
+            $superAdmin->givePermissionTo($this->permissions);
+        }
+
         $accountant = Role::where('name', 'accountant')->where('guard_name', 'web')->first();
         if ($accountant) {
             $accountant->givePermissionTo($this->permissions);

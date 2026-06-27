@@ -1683,6 +1683,7 @@ Route::prefix('sales')->name('sales.')->middleware(['auth', 'company.scope', 'ch
     Route::get('pos', [PosSaleController::class, 'index'])->name('pos.index');
     Route::post('pos', [PosSaleController::class, 'store'])->name('pos.store');
     Route::get('pos/cashier', [PosSaleController::class, 'cashier'])->name('pos.cashier');
+    Route::get('pos/cashier/open-bills', [PosSaleController::class, 'cashierOpenBills'])->name('pos.cashier.open-bills');
     Route::post('pos/bills/{encodedId}/pay', [PosSaleController::class, 'payBill'])->name('pos.bills.pay');
     Route::get('pos/list', [PosSaleController::class, 'list'])->name('pos.list');
     Route::get('pos/statistics', [PosSaleController::class, 'statistics'])->name('pos.statistics');

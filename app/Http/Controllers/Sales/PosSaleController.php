@@ -24,7 +24,7 @@ class PosSaleController extends Controller
 {
     public function __construct()
     {
-        $this->middleware('permission:access pos cashier', ['only' => ['cashier', 'payBill']]);
+        $this->middleware('permission:access pos cashier', ['only' => ['cashier', 'cashierOpenBills', 'payBill']]);
         $this->middleware('permission:access pos list', ['only' => ['list']]);
     }
 
@@ -1381,20 +1381,61 @@ class PosSaleController extends Controller
     }
 
     /**
-     * AJAX DataTable data for open POS bills on the cashier screen.
+     * Base query for open POS bills visible to the current cashier.
      */
-    protected function cashierBillsData(Request $request)
+    protected function openBillsQuery()
     {
         $branchId = session('branch_id') ?? (Auth::user()->branch_id ?? null);
 
-        $baseQuery = SalesInvoice::query()
+        $query = SalesInvoice::query()
             ->where('reference_no', PosBillService::REFERENCE_NO)
             ->where('company_id', Auth::user()->company_id)
             ->when($branchId, fn ($q) => $q->where('branch_id', $branchId))
             ->where('balance_due', '>', 0)
             ->whereNotIn('status', ['paid', 'cancelled']);
 
-        PosBillService::applyCashierBillVisibility($baseQuery);
+        return PosBillService::applyCashierBillVisibility($query);
+    }
+
+    /**
+     * All open POS bills for the cashier multi-select.
+     */
+    public function cashierOpenBills()
+    {
+        $bills = $this->openBillsQuery()
+            ->with(['customer'])
+            ->orderByDesc('invoice_date')
+            ->get()
+            ->map(function (SalesInvoice $bill) {
+                $currency = strtoupper($bill->currency ?? 'TZS');
+                $customerName = $bill->customer->name ?? 'N/A';
+
+                return [
+                    'id' => $bill->encoded_id,
+                    'invoice_number' => $bill->invoice_number,
+                    'customer_name' => $customerName,
+                    'balance_due' => (float) $bill->balance_due,
+                    'currency' => $currency,
+                    'label' => sprintf(
+                        '%s — %s — %s %s',
+                        $bill->invoice_number,
+                        $customerName,
+                        number_format((float) $bill->balance_due, 2),
+                        $currency
+                    ),
+                ];
+            })
+            ->values();
+
+        return response()->json(['bills' => $bills]);
+    }
+
+    /**
+     * AJAX DataTable data for open POS bills on the cashier screen.
+     */
+    protected function cashierBillsData(Request $request)
+    {
+        $baseQuery = $this->openBillsQuery();
 
         $recordsTotal = (clone $baseQuery)->count();
 

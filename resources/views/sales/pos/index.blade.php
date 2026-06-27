@@ -160,11 +160,13 @@
             <div class="col-12">
                 <div class="page-title-box d-flex align-items-center justify-content-between">
                     <h4 class="mb-0">Point of Sale</h4>
+                    @if(($posSaleMode ?? 'direct') !== 'bill')
                     @can('access pos list')
                     <a href="{{ route('sales.pos.list') }}" class="btn btn-outline-primary btn-sm">
                         <i class="bx bx-list-ul me-1"></i> POS Sales List
                     </a>
                     @endcan
+                    @endif
                 </div>
             </div>
         </div>
