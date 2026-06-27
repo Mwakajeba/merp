@@ -208,22 +208,148 @@ class PosBillService
         return $invoice->fresh(['customer', 'items', 'branch', 'company']);
     }
 
-    public function resolveCustomer(int $customerId, ?string $customerName, int $companyId, int $branchId): Customer
-    {
+    public function resolveCustomer(
+        int $customerId,
+        ?string $customerName,
+        int $companyId,
+        int $branchId,
+        ?User $user = null
+    ): Customer {
+        $user = $user ?? Auth::user();
+
         if ($customerId > 0) {
             return Customer::where('company_id', $companyId)->findOrFail($customerId);
         }
 
-        $name = trim((string) $customerName) ?: (Auth::user()->name ?? 'Walk-in Customer');
+        $name = trim((string) $customerName) ?: ($user?->name ?? 'Walk-in Customer');
+        $existing = $this->findExistingPosCustomer($name, $user, $companyId, $branchId);
+
+        if ($existing) {
+            if ($user && $this->shouldUseUserProfileForPosCustomer($name, $user)) {
+                $this->syncCustomerFromUser($existing, $user, $name);
+            }
+
+            return $existing->fresh();
+        }
+
+        return $this->createPosCustomer($name, $user, $companyId, $branchId);
+    }
+
+    protected function shouldUseUserProfileForPosCustomer(string $name, User $user): bool
+    {
+        return strcasecmp(trim($name), trim((string) $user->name)) === 0;
+    }
+
+    protected function findExistingPosCustomer(
+        string $name,
+        ?User $user,
+        int $companyId,
+        int $branchId
+    ): ?Customer {
+        $baseQuery = Customer::query()->where('company_id', $companyId);
+
+        if ($user && $this->shouldUseUserProfileForPosCustomer($name, $user)) {
+            if (!empty($user->phone)) {
+                $customer = $this->findCustomerByPhone($baseQuery->clone(), $user->phone);
+                if ($customer) {
+                    return $customer;
+                }
+            }
+
+            if (!empty($user->email)) {
+                $customer = $baseQuery->clone()->where('email', $user->email)->first();
+                if ($customer) {
+                    return $customer;
+                }
+            }
+        }
+
+        return $baseQuery
+            ->where('branch_id', $branchId)
+            ->whereRaw('LOWER(name) = ?', [strtolower(trim($name))])
+            ->first();
+    }
+
+    protected function findCustomerByPhone($query, string $phone): ?Customer
+    {
+        $normalized = normalize_phone_number($phone);
+        $candidates = array_unique(array_filter([
+            $phone,
+            $normalized,
+            str_starts_with($normalized, '255') && strlen($normalized) === 12
+                ? '0' . substr($normalized, 3)
+                : null,
+        ]));
+
+        return $query->whereIn('phone', $candidates)->first();
+    }
+
+    protected function syncCustomerFromUser(Customer $customer, User $user, string $name): void
+    {
+        $updates = [];
+
+        if ($name !== '' && $customer->name !== $name) {
+            $updates['name'] = $name;
+        }
+
+        if (!empty($user->phone)) {
+            $phone = normalize_phone_number($user->phone);
+            if ($phone !== '' && $customer->phone !== $phone) {
+                $updates['phone'] = $phone;
+            }
+        }
+
+        if (!empty($user->email) && $customer->email !== $user->email) {
+            $updates['email'] = $user->email;
+        }
+
+        if ($updates !== []) {
+            $customer->update($updates);
+        }
+    }
+
+    protected function createPosCustomer(
+        string $name,
+        ?User $user,
+        int $companyId,
+        int $branchId
+    ): Customer {
+        $useUserProfile = $user && $this->shouldUseUserProfileForPosCustomer($name, $user);
+
+        $phone = null;
+        if ($useUserProfile && !empty($user->phone)) {
+            $phone = normalize_phone_number($user->phone);
+        }
+
+        if (!$phone) {
+            $phone = $this->generateUniquePosPhone($companyId, $name);
+        }
+
+        $email = ($useUserProfile && !empty($user->email)) ? $user->email : null;
 
         return Customer::create([
             'customerNo' => 100000 + (Customer::max('id') ?? 0) + 1,
             'name' => $name,
-            'phone' => 'POS' . substr((string) time(), -7) . random_int(10, 99),
+            'phone' => $phone,
+            'email' => $email,
             'company_id' => $companyId,
             'branch_id' => $branchId,
             'status' => 'active',
         ]);
+    }
+
+    protected function generateUniquePosPhone(int $companyId, string $name): string
+    {
+        $hash = abs(crc32($companyId . '|' . strtolower(trim($name))));
+        $phone = '255' . str_pad((string) ($hash % 1000000000), 9, '0', STR_PAD_LEFT);
+
+        $attempt = 0;
+        while (Customer::where('company_id', $companyId)->where('phone', $phone)->exists()) {
+            $attempt++;
+            $phone = '255' . str_pad((string) (($hash + $attempt) % 1000000000), 9, '0', STR_PAD_LEFT);
+        }
+
+        return $phone;
     }
 
     /**
