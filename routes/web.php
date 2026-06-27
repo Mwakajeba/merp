@@ -12,7 +12,7 @@ use App\Http\Controllers\SuperAdminController;
 use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\LanguageController;
 use App\Http\Controllers\CustomerController;
-use App\Http\Controllers\Production\ItemBatchController;
+// use App\Http\Controllers\Production\ItemBatchController; // Controller missing - commented out
 use App\Http\Controllers\SubscriptionController;
 use App\Http\Controllers\CashCollateralTypeController;
 use App\Http\Controllers\CashCollateralController;
@@ -137,7 +137,7 @@ use App\Http\Controllers\ActivityLogsController;
 use App\Http\Controllers\ChartAccountController;
 use App\Http\Controllers\BankAccountController;
 // use App\Http\Controllers\CashDepositController; // Controller missing - commented out
-use App\Http\Controllers\ProductionBatchController;
+// use App\Http\Controllers\ProductionBatchController; // Controller missing - commented out
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\AnalyticsController;
 use App\Http\Controllers\JournalController;
@@ -1787,37 +1787,29 @@ Route::prefix('reports/currency')->group(function () {
     Route::get('/export-pdf', [App\Http\Controllers\Reports\Sales\CurrencyReportController::class, 'exportPdf'])->name('reports.currency.export-pdf');
 });
 
-// Production Management Module Routes
-Route::prefix('production')->name('production.')->middleware(['auth'])->group(function () {
-    Route::resource('orders', App\Http\Controllers\Sales\SalesOrderController::class);
-    Route::resource('batches', App\Http\Controllers\Production\ProductionBatchController::class)->names('batches');
-    Route::resource('machines', App\Http\Controllers\Production\ProductionMachineController::class)->names('machines');
-
-    // Work Orders for Sweater Production
-    Route::resource('work-orders', App\Http\Controllers\Production\WorkOrderController::class)->names('work-orders');
-    Route::post('work-orders/{encodedId}/advance-stage', [App\Http\Controllers\Production\WorkOrderController::class, 'advanceStage'])->name('work-orders.advance-stage');
-    Route::post('work-orders/{encodedId}/issue-materials', [App\Http\Controllers\Production\WorkOrderController::class, 'issuesMaterials'])->name('work-orders.issue-materials');
-    Route::post('work-orders/{encodedId}/record-production', [App\Http\Controllers\Production\WorkOrderController::class, 'recordProduction'])->name('work-orders.record-production');
-    Route::post('work-orders/{encodedId}/quality-check', [App\Http\Controllers\Production\WorkOrderController::class, 'qualityCheck'])->name('work-orders.quality-check');
-    Route::post('work-orders/{encodedId}/record-packaging', [App\Http\Controllers\Production\WorkOrderController::class, 'recordPackaging'])->name('work-orders.record-packaging');
-
-    // Finished Goods Packaging (Standalone)
-    Route::get('finished-goods-packaging', [App\Http\Controllers\Production\FinishedGoodsPackagingController::class, 'index'])->name('finished-goods-packaging.index');
-    Route::post('finished-goods-packaging', [App\Http\Controllers\Production\FinishedGoodsPackagingController::class, 'store'])->name('finished-goods-packaging.store');
-    Route::get('finished-goods-packaging/search-items', [App\Http\Controllers\Production\FinishedGoodsPackagingController::class, 'searchItems'])->name('finished-goods-packaging.search-items');
-
-    // Assign order to batch
-    Route::get('batches/{encodedId}/assign-order', [App\Http\Controllers\Production\ProductionBatchController::class, 'assignOrderForm'])->name('batches.assign-order');
-    Route::post('batches/{encodedId}/assign-order', [App\Http\Controllers\Production\ProductionBatchController::class, 'assignOrder'])->name('batches.assign-order.store');
-    // Update assigned order quantity
-    Route::post('batches/{batchHashid}/assigned-orders/{orderHashid}/update', [App\Http\Controllers\Production\ProductionBatchController::class, 'updateAssignedOrder']);
-    // Delete assigned order
-    Route::post('batches/{batchHashid}/assigned-orders/{orderHashid}/delete', [App\Http\Controllers\Production\ProductionBatchController::class, 'deleteAssignedOrder']);
-});
+// Production Management Module Routes — controllers not in this deployment
+// Route::prefix('production')->name('production.')->middleware(['auth'])->group(function () {
+//     Route::resource('orders', App\Http\Controllers\Sales\SalesOrderController::class);
+//     Route::resource('batches', App\Http\Controllers\Production\ProductionBatchController::class)->names('batches');
+//     Route::resource('machines', App\Http\Controllers\Production\ProductionMachineController::class)->names('machines');
+//     Route::resource('work-orders', App\Http\Controllers\Production\WorkOrderController::class)->names('work-orders');
+//     Route::post('work-orders/{encodedId}/advance-stage', [App\Http\Controllers\Production\WorkOrderController::class, 'advanceStage'])->name('work-orders.advance-stage');
+//     Route::post('work-orders/{encodedId}/issue-materials', [App\Http\Controllers\Production\WorkOrderController::class, 'issuesMaterials'])->name('work-orders.issue-materials');
+//     Route::post('work-orders/{encodedId}/record-production', [App\Http\Controllers\Production\WorkOrderController::class, 'recordProduction'])->name('work-orders.record-production');
+//     Route::post('work-orders/{encodedId}/quality-check', [App\Http\Controllers\Production\WorkOrderController::class, 'qualityCheck'])->name('work-orders.quality-check');
+//     Route::post('work-orders/{encodedId}/record-packaging', [App\Http\Controllers\Production\WorkOrderController::class, 'recordPackaging'])->name('work-orders.record-packaging');
+//     Route::get('finished-goods-packaging', [App\Http\Controllers\Production\FinishedGoodsPackagingController::class, 'index'])->name('finished-goods-packaging.index');
+//     Route::post('finished-goods-packaging', [App\Http\Controllers\Production\FinishedGoodsPackagingController::class, 'store'])->name('finished-goods-packaging.store');
+//     Route::get('finished-goods-packaging/search-items', [App\Http\Controllers\Production\FinishedGoodsPackagingController::class, 'searchItems'])->name('finished-goods-packaging.search-items');
+//     Route::get('batches/{encodedId}/assign-order', [App\Http\Controllers\Production\ProductionBatchController::class, 'assignOrderForm'])->name('batches.assign-order');
+//     Route::post('batches/{encodedId}/assign-order', [App\Http\Controllers\Production\ProductionBatchController::class, 'assignOrder'])->name('batches.assign-order.store');
+//     Route::post('batches/{batchHashid}/assigned-orders/{orderHashid}/update', [App\Http\Controllers\Production\ProductionBatchController::class, 'updateAssignedOrder']);
+//     Route::post('batches/{batchHashid}/assigned-orders/{orderHashid}/delete', [App\Http\Controllers\Production\ProductionBatchController::class, 'deleteAssignedOrder']);
+// });
 
 // Production Reports (fix for reports.production route used in side menu)
 Route::get('/reports/production', function () {
-    return redirect()->route('production.batches.index');
+    return redirect()->route('dashboard')->with('info', 'Production module is not available on this server.');
 })->middleware(['auth'])->name('reports.production');
 
 // Purchases Reports (fix for reports.purchases route used in side menu)
@@ -1845,11 +1837,11 @@ Route::get('/inventory/opening-balances/template', [OpeningBalanceController::cl
 // Route::put('/inventory/opening-balances/{movement}', [OpeningBalanceController::class, 'update'])->name('movements.update');
 // Route::delete('/inventory/opening-balances/{movement}', [OpeningBalanceController::class, 'destroy'])->name('movements.destroy');
 
-Route::prefix('production/batches')->group(function () {
-    Route::get('{batch}/add-item', [ItemBatchController::class, 'create'])->name('production.batches.add-item');
-    Route::post('{batch}/add-item', [ItemBatchController::class, 'store'])->name('production.batches.add-item.store');
-    Route::delete('item-batch/{id}/delete', [ItemBatchController::class, 'destroy'])->name('production.batches.item-batch.delete');
-});
+// Route::prefix('production/batches')->group(function () {
+//     Route::get('{batch}/add-item', [ItemBatchController::class, 'create'])->name('production.batches.add-item');
+//     Route::post('{batch}/add-item', [ItemBatchController::class, 'store'])->name('production.batches.add-item.store');
+//     Route::delete('item-batch/{id}/delete', [ItemBatchController::class, 'destroy'])->name('production.batches.item-batch.delete');
+// });
 
 // API Routes for dynamic data
 Route::prefix('api')->middleware(['auth', 'throttle.api'])->group(function () {
