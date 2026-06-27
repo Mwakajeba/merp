@@ -11,93 +11,129 @@
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body,
         .receipt {
-            font-family: Roboto, sans-serif;
+            font-family: Roboto, Arial, sans-serif;
         }
         body {
-            font-size: 13px;
-            line-height: 1.5;
+            font-size: 12px;
+            line-height: 1.4;
             background: white;
             color: #000;
             font-weight: 400;
             -webkit-font-smoothing: antialiased;
+            margin: 0;
+            padding: 0;
         }
         .receipt {
-            width: 320px;
-            max-width: 320px;
+            width: 72mm;
+            max-width: 72mm;
             margin: 0 auto;
-            padding: 10px;
+            padding: 3mm 4mm;
+            overflow: hidden;
+            word-wrap: break-word;
         }
         .header {
             text-align: center;
             border-bottom: 1px dashed #000;
-            padding-bottom: 12px;
-            margin-bottom: 12px;
+            padding-bottom: 8px;
+            margin-bottom: 8px;
         }
         .company-name {
-            font-size: 20px;
-            font-weight: 700;
-            text-transform: uppercase;
-        }
-        .receipt-title {
             font-size: 16px;
             font-weight: 700;
-            margin: 6px 0;
+            text-transform: uppercase;
+            word-wrap: break-word;
+        }
+        .receipt-title {
+            font-size: 14px;
+            font-weight: 700;
+            margin: 4px 0;
             text-transform: uppercase;
         }
-        .receipt-info div {
+        .receipt-info div,
+        .item-line,
+        .totals .row {
             display: flex;
             justify-content: space-between;
+            align-items: flex-start;
+            gap: 6px;
+        }
+        .receipt-info div {
             margin-bottom: 3px;
-            font-size: 12px;
+            font-size: 11px;
+        }
+        .receipt-info .label,
+        .totals .row span:first-child,
+        .item-line span:first-child {
+            flex-shrink: 0;
+        }
+        .receipt-info div span:last-child,
+        .item-line span:last-child,
+        .totals .row span:last-child {
+            text-align: right;
+            min-width: 0;
+            flex: 1 1 auto;
+            word-break: break-word;
+            overflow-wrap: anywhere;
         }
         .receipt-info .label { font-weight: 500; }
         .item {
             margin-bottom: 8px;
             border-bottom: 1px dotted #ccc;
             padding-bottom: 5px;
-            font-size: 12px;
+            font-size: 11px;
         }
-        .item-name { font-weight: 500; font-size: 12px; margin-bottom: 2px; }
-        .item-line {
-            display: flex;
-            justify-content: space-between;
+        .item-name {
+            font-weight: 500;
+            font-size: 11px;
+            margin-bottom: 2px;
+            word-wrap: break-word;
         }
         .totals {
             border-top: 1px dashed #000;
             padding-top: 8px;
             margin-top: 8px;
-            font-size: 12px;
+            font-size: 11px;
         }
         .totals .row {
-            display: flex;
-            justify-content: space-between;
             margin-bottom: 3px;
         }
         .totals .final {
             font-weight: 700;
-            font-size: 18px;
+            font-size: 15px;
             margin-top: 6px;
             padding-top: 6px;
             border-top: 1px solid #000;
         }
         .footer {
             text-align: center;
-            margin-top: 12px;
-            font-size: 11px;
+            margin-top: 10px;
+            font-size: 10px;
         }
         .no-print {
             text-align: center;
             margin: 12px 0;
         }
         @media print {
-            @page { margin: 0; }
-            body {
-                margin: 6mm;
-                font-size: 13px;
-                line-height: 1.5;
-                font-family: Roboto, sans-serif;
+            @page {
+                size: 80mm auto;
+                margin: 2mm 3mm;
+            }
+            html, body {
+                width: 72mm;
+                max-width: 72mm;
+                margin: 0 !important;
+                padding: 0 !important;
+                font-size: 12px;
+                line-height: 1.4;
+                font-family: Roboto, Arial, sans-serif;
                 -webkit-print-color-adjust: exact;
                 print-color-adjust: exact;
+            }
+            .receipt {
+                width: 72mm;
+                max-width: 72mm;
+                margin: 0;
+                padding: 1mm 2mm;
             }
             .no-print { display: none; }
         }

@@ -17,12 +17,12 @@
         
         body,
         .receipt {
-            font-family: Roboto, sans-serif;
+            font-family: Roboto, Arial, sans-serif;
         }
         
         body {
-            font-size: 13px;
-            line-height: 1.5;
+            font-size: 12px;
+            line-height: 1.4;
             margin: 0;
             padding: 0;
             background: white;
@@ -32,10 +32,10 @@
         }
         
         .receipt {
-            width: 320px;
-            max-width: 320px;
+            width: 72mm;
+            max-width: 72mm;
             margin: 0 auto;
-            padding: 10px;
+            padding: 3mm 4mm;
             background: white;
             overflow: hidden;
             word-wrap: break-word;
@@ -57,7 +57,7 @@
         }
         
         .company-name {
-            font-size: 20px;
+            font-size: 16px;
             font-weight: 700;
             margin-bottom: 5px;
             text-transform: uppercase;
@@ -65,7 +65,7 @@
         }
         
         .receipt-title {
-            font-size: 16px;
+            font-size: 14px;
             font-weight: 700;
             margin-bottom: 5px;
             text-transform: uppercase;
@@ -80,25 +80,42 @@
         /* Receipt information */
         .receipt-info {
             margin-bottom: 12px;
-            font-size: 12px;
-            padding: 0 3px;
+            font-size: 11px;
+            padding: 0;
         }
         
-        .receipt-info div {
+        .receipt-info div,
+        .total-row,
+        .payment-info div {
             margin-bottom: 3px;
             display: flex;
             justify-content: space-between;
+            align-items: flex-start;
+            gap: 6px;
             padding: 2px 0;
         }
         
-        .receipt-info .label {
+        .receipt-info .label,
+        .total-row span:first-child,
+        .payment-info .label {
             font-weight: 500;
+            flex-shrink: 0;
+        }
+
+        .receipt-info div span:last-child,
+        .total-row span:last-child,
+        .payment-info div span:last-child {
+            text-align: right;
+            min-width: 0;
+            flex: 1 1 auto;
+            word-break: break-word;
+            overflow-wrap: anywhere;
         }
         
         /* Items section */
         .items {
             margin-bottom: 12px;
-            padding: 0 3px;
+            padding: 0;
         }
         
         .item {
@@ -110,10 +127,10 @@
         
         .item-name {
             font-weight: 500;
-            font-size: 12px;
+            font-size: 11px;
             margin-bottom: 3px;
             word-wrap: break-word;
-            padding: 0 2px;
+            padding: 0;
         }
         
         .item-details {
@@ -143,8 +160,9 @@
         .item-total {
             text-align: right;
             font-weight: 500;
-            font-size: 12px;
-            padding: 0 2px;
+            font-size: 11px;
+            padding: 0;
+            word-break: break-word;
         }
         
         /* Totals section */
@@ -152,20 +170,23 @@
             border-top: 1px dashed #000;
             padding-top: 12px;
             margin-top: 12px;
-            font-size: 12px;
-            padding: 0 3px;
+            font-size: 11px;
+            padding-left: 0;
+            padding-right: 0;
         }
         
         .total-row {
             display: flex;
             justify-content: space-between;
+            align-items: flex-start;
+            gap: 6px;
             margin-bottom: 3px;
             padding: 2px 0;
         }
         
         .total-row.final {
             font-weight: 700;
-            font-size: 18px;
+            font-size: 15px;
             border-top: 1px solid #000;
             padding-top: 6px;
             margin-top: 6px;
@@ -176,14 +197,17 @@
             margin-top: 12px;
             border-top: 1px dashed #000;
             padding-top: 12px;
-            font-size: 12px;
-            padding: 0 3px;
+            font-size: 11px;
+            padding-left: 0;
+            padding-right: 0;
         }
         
         .payment-info div {
             margin-bottom: 3px;
             display: flex;
             justify-content: space-between;
+            align-items: flex-start;
+            gap: 6px;
             padding: 2px 0;
         }
         
@@ -224,14 +248,26 @@
         
         /* Print media query – align behavior with Sales Invoice receipt */
         @media print {
-            @page { margin: 0; }
-            body {
-                margin: 6mm;
-                font-size: 13px;
-                line-height: 1.5;
-                font-family: Roboto, sans-serif;
+            @page {
+                size: 80mm auto;
+                margin: 2mm 3mm;
+            }
+            html, body {
+                width: 72mm;
+                max-width: 72mm;
+                margin: 0 !important;
+                padding: 0 !important;
+                font-size: 12px;
+                line-height: 1.4;
+                font-family: Roboto, Arial, sans-serif;
                 -webkit-print-color-adjust: exact;
                 print-color-adjust: exact;
+            }
+            .receipt {
+                width: 72mm;
+                max-width: 72mm;
+                margin: 0;
+                padding: 1mm 2mm;
             }
             .no-print { display: none; }
         }
