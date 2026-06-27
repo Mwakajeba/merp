@@ -413,11 +413,6 @@
                                 <button type="button" class="btn btn-outline-secondary" onclick="clearCart()">
                                     <i class="bx bx-refresh"></i> Clear Cart
                                 </button>
-                                @if(($posSaleMode ?? 'direct') === 'bill' && auth()->user()->can('access pos cashier'))
-                                <a href="{{ route('sales.pos.cashier') }}" class="btn btn-outline-primary">
-                                    <i class="bx bx-money"></i> Cashier — Pay Bills
-                                </a>
-                                @endif
                             </div>
                         </div>
                         @if(($posSaleMode ?? 'direct') === 'bill')
@@ -425,11 +420,6 @@
                             <button type="button" class="btn btn-success btn-lg" onclick="processSale()">
                                 <i class="bx bx-receipt"></i> Create Bill
                             </button>
-                            @can('access pos cashier')
-                            <a href="{{ route('sales.pos.cashier') }}" class="btn btn-outline-primary">
-                                <i class="bx bx-money"></i> Cashier — Pay Bills
-                            </a>
-                            @endcan
                         </div>
                         @endif
                     </div>
