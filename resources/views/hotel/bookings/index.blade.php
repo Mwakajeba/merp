@@ -430,10 +430,10 @@ $(document).ready(function() {
             if (typeof FullCalendar === 'undefined') {
                 $('<link>').attr({
                     rel: 'stylesheet',
-                    href: 'https://cdn.jsdelivr.net/npm/fullcalendar@5.11.0/main.min.css'
+                    href: "{{ asset('assets/vendor/fullcalendar/main.min.css') }}"
                 }).appendTo('head');
                 
-                $.getScript('https://cdn.jsdelivr.net/npm/fullcalendar@5.11.0/main.min.js', function() {
+                $.getScript("{{ asset('assets/vendor/fullcalendar/main.min.js') }}", function() {
                     initializeCalendar();
                 });
             } else {

@@ -526,7 +526,7 @@
 </div>
 
 @push('scripts')
-<script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+<script src="{{ asset('assets/vendor/apexcharts/apexcharts.min.js') }}"></script>
 <script nonce="{{ $cspNonce ?? '' }}">
 $(document).ready(function() {
     // Handle regenerate with SweetAlert

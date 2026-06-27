@@ -8,7 +8,7 @@
     <title>@yield('title', 'Print')</title>
 
     <!-- Bootstrap CSS for print -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="{{ asset('assets/css/bootstrap.min.css') }}" rel="stylesheet">
 
     <!-- Custom print styles -->
     <style nonce="{{ $cspNonce ?? '' }}">
@@ -68,7 +68,7 @@
     @yield('content')
 
     <!-- Bootstrap JS -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{{ asset('assets/js/bootstrap.bundle.min.js') }}"></script>
 
     @stack('scripts')
 </body>

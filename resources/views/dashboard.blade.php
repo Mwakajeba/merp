@@ -403,7 +403,7 @@ use Vinkla\Hashids\Facades\Hashids;
                 </div>
             </div>
         </div>
-        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+        <script src="{{ asset('assets/vendor/chart.js/chart.umd.min.js') }}"></script>
         <script nonce="{{ $cspNonce ?? '' }}">
         document.addEventListener('DOMContentLoaded', function() {
             // Load Inventory Summary
@@ -1701,7 +1701,6 @@ use Vinkla\Hashids\Facades\Hashids;
             </div>
         </div>
         @push('scripts')
-        <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
         <script nonce="{{ $cspNonce ?? '' }}">
         // Character counter for bulk SMS
         function updateBulkCharacterCount() {

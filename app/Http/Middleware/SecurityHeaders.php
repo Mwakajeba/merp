@@ -64,11 +64,11 @@ class SecurityHeaders
              if ($storedCsp === null || $storedCsp === '' || $storedCsp === 'default') {
                 // Use 'unsafe-inline' only (no nonce): with nonce present, browsers ignore 'unsafe-inline' and block inline style/script without nonce
                 $csp = "default-src 'self'; " .
-                    "script-src 'self' 'unsafe-inline' https://code.jquery.com https://cdn.jsdelivr.net https://cdn.datatables.net https://cdnjs.cloudflare.com; " .
-                    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net https://cdn.datatables.net; " .
-                    "font-src 'self' https://fonts.gstatic.com data:; " .
-                    "img-src 'self' data: https:; " .
-                    "connect-src 'self' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://cdn.datatables.net; " .
+                    "script-src 'self' 'unsafe-inline'; " .
+                    "style-src 'self' 'unsafe-inline'; " .
+                    "font-src 'self' data:; " .
+                    "img-src 'self' data: blob:; " .
+                    "connect-src 'self'; " .
                     "frame-src 'self'; " .
                     "object-src 'none'; " .
                     "base-uri 'self'; " .

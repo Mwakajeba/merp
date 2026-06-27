@@ -197,7 +197,7 @@
 @endsection
 
 @push('scripts')
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script src="{{ asset('assets/vendor/sweetalert2/sweetalert2.min.js') }}"></script>
 <script nonce="{{ $cspNonce ?? '' }}">
 $(document).ready(function() {
     // Initialize DataTable

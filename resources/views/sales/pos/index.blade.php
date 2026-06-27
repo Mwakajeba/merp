@@ -7,8 +7,6 @@
 @endpush
 
 @push('styles')
-<!-- SweetAlert2 CSS -->
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
 <style>
 .product-card {
     transition: all 0.3s ease;
@@ -550,10 +548,7 @@
 @endsection
 
 @push('scripts')
-<!-- SweetAlert2 JS -->
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-<!-- HTML5 QR Code Scanner -->
-<script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<script src="{{ asset('assets/vendor/html5-qrcode/html5-qrcode.min.js') }}"></script>
 <script nonce="{{ $cspNonce ?? '' }}">
 let cart = [];
 let currentItem = null;
@@ -990,9 +985,9 @@ function ensureQRLibrary() {
     }
     
     return new Promise((resolve, reject) => {
-        // Try loading from alternative CDN
+        // Load QR library from local assets if not already available
         const script = document.createElement('script');
-        script.src = 'https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js';
+        script.src = "{{ asset('assets/vendor/html5-qrcode/html5-qrcode.min.js') }}";
         script.onload = () => {
             if (checkQRLibrary()) {
                 resolve();

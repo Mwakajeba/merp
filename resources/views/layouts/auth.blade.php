@@ -22,8 +22,10 @@
     <link href="{{ asset('assets/css/app.css') }}" rel="stylesheet" />
     <link href="{{ asset('assets/css/icons.css') }}" rel="stylesheet" />
 
-    <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&amp;display=swap" rel="stylesheet" />
+    <!-- Fonts (offline: system stack) -->
+    <style nonce="{{ $cspNonce ?? '' }}">
+        body { font-family: Roboto, Arial, Helvetica, sans-serif; }
+    </style>
 
     <title>@yield('title', 'Login')</title>
     @stack('styles')
@@ -35,8 +37,9 @@
     </div>
 
     <!-- Scripts: jQuery MUST load first -->
-    <script src="{{ asset('assets/js/jquery.min.js') }}"></script>
+    <script src="{{ asset('assets/vendor/jquery/jquery-3.6.0.min.js') }}"></script>
     <script src="{{ asset('assets/js/bootstrap.bundle.min.js') }}"></script>
+    <script src="{{ asset('assets/vendor/sweetalert2/sweetalert2.min.js') }}"></script>
     <script src="{{ asset('assets/plugins/simplebar/js/simplebar.min.js') }}"></script>
     <script src="{{ asset('assets/plugins/metismenu/js/metisMenu.min.js') }}"></script>
     <script src="{{ asset('assets/plugins/perfect-scrollbar/js/perfect-scrollbar.js') }}"></script>

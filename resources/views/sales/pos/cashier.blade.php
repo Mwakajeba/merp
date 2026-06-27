@@ -4,7 +4,6 @@
 
 @push('styles')
 <link rel="stylesheet" href="{{ asset('assets/plugins/datatable/css/dataTables.bootstrap5.min.css') }}">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
 <style>
     #open-bills-table tbody tr { cursor: pointer; }
     #open-bills-table tbody tr.table-active { background-color: rgba(25, 135, 84, 0.12) !important; }
@@ -114,7 +113,6 @@
 @push('scripts')
 <script src="{{ asset('assets/plugins/datatable/js/jquery.dataTables.min.js') }}"></script>
 <script src="{{ asset('assets/plugins/datatable/js/dataTables.bootstrap5.min.js') }}"></script>
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script nonce="{{ $cspNonce ?? '' }}">
 const posAutoPrintReceipt = @json($posAutoPrintReceipt);
 const openBillsUrl = @json(route('sales.pos.cashier.open-bills'));

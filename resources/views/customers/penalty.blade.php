@@ -49,7 +49,7 @@
 @endsection
 
 {{-- Include jQuery before DataTables script --}}
-<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+<script src="{{ asset('assets/vendor/jquery/jquery-3.6.0.min.js') }}"></script>
 {{-- You might also need the DataTables JS library itself if it's not included in layouts.main --}}
 {{-- Example: <script src="https://cdn.datatables.net/1.11.3/js/jquery.dataTables.min.js"></script> --}}
 

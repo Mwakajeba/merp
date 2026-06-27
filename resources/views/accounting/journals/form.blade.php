@@ -235,7 +235,7 @@
 </form>
 
 <!-- Include Select2 CSS/JS -->
-<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<link href="{{ asset('assets/vendor/select2/select2.min.css') }}" rel="stylesheet" />
 
 <script nonce="{{ $cspNonce ?? '' }}">
 // Wait for jQuery to be available
@@ -253,7 +253,7 @@ function waitForJQuery(callback) {
 waitForJQuery(function() {
     // Load Select2 after jQuery is available
     if (typeof $.fn.select2 === 'undefined') {
-        $.getScript('https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js', function() {
+        $.getScript("{{ asset('assets/vendor/select2/select2.min.js') }}", function() {
             initializeForm();
         });
     } else {

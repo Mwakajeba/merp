@@ -770,11 +770,11 @@
 @endsection
 
 @push('scripts')
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js" 
-        onerror="console.error('Failed to load Chart.js from CDN'); 
+<script src="{{ asset('assets/vendor/chart.js/chart.umd.min.js') }}"
+        onerror="console.error('Failed to load Chart.js'); 
                  document.getElementById('chartErrorMsg')?.removeAttribute('style');"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="{{ asset('assets/vendor/jspdf/jspdf.umd.min.js') }}"></script>
+<script src="{{ asset('assets/vendor/html2canvas/html2canvas.min.js') }}"></script>
 <script nonce="{{ $cspNonce ?? '' }}">
     let charts = {};
     let currentData = null;

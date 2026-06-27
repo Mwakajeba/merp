@@ -273,7 +273,7 @@
 @endsection
 
 @push('scripts')
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<script src="{{ asset('assets/vendor/html2pdf/html2pdf.bundle.min.js') }}"></script>
 <script nonce="{{ $cspNonce ?? '' }}">
     function printTransactions() {
         const printContent = document.getElementById('pdfContent').innerHTML;

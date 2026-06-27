@@ -321,7 +321,7 @@
 @endsection
 
 @push('scripts')
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="{{ asset('assets/vendor/chart.js/chart.umd.min.js') }}"></script>
 <script nonce="{{ $cspNonce ?? '' }}">
 (function(){
     const period = '{{ $period }}';

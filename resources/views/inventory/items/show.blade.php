@@ -280,7 +280,7 @@
 </div>
 
 @push('scripts')
-<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+<script src="{{ asset('assets/vendor/qrcodejs/qrcode.min.js') }}"></script>
 <script nonce="{{ $cspNonce ?? '' }}">
 $(document).ready(function() {
     // Generate QR Code
@@ -387,7 +387,7 @@ $(document).ready(function() {
                         ${qrData.cat ? '<div class="item-category">' + qrData.cat + '</div>' : ''}
                     </div>
                 </div>
-                <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"><\/script>
+                <script src="{{ asset('assets/vendor/qrcodejs/qrcode.min.js') }}"><\/script>
                 <script nonce="{{ $cspNonce ?? '' }}">
                     new QRCode(document.getElementById('qr-print'), {
                         text: ${JSON.stringify(JSON.stringify(qrData))},
