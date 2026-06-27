@@ -596,6 +596,8 @@ let posProductsState = {
     searchTimer: null,
 };
 
+const posProductCache = new Map();
+
 function escapeHtml(value) {
     return String(value ?? '')
         .replace(/&/g, '&amp;')
@@ -631,7 +633,26 @@ function formatExpiryBadge(expiryDate) {
     </div>`;
 }
 
+function openPosProductModal(product) {
+    showItemModal(
+        product.id,
+        product.name,
+        product.unit_price,
+        product.current_stock,
+        product.vat_type,
+        product.vat_rate,
+        product.item_type,
+        product.track_stock,
+        product.has_wholesale,
+        product.wholesale_unit_price || 0
+    );
+}
+
 function buildProductCard(product) {
+    if (!product.is_out_of_stock) {
+        posProductCache.set(product.id, product);
+    }
+
     const isService = product.item_type === 'service' || !product.track_stock;
     const stockHtml = isService
         ? '<small class="text-muted" style="font-size: 0.65rem;">Service</small>'
@@ -640,9 +661,6 @@ function buildProductCard(product) {
             : `<small class="text-muted" style="font-size: 0.65rem;">Stock: ${product.current_stock}</small>`);
 
     const cardClass = product.is_out_of_stock ? 'product-card-disabled' : 'product-card-clickable';
-    const clickHandler = product.is_out_of_stock
-        ? ''
-        : `onclick="showItemModal(${product.id}, ${JSON.stringify(product.name)}, ${product.unit_price}, ${product.current_stock}, ${JSON.stringify(product.vat_type)}, ${product.vat_rate}, ${JSON.stringify(product.item_type)}, ${product.track_stock ? 'true' : 'false'}, ${product.has_wholesale ? 'true' : 'false'}, ${product.wholesale_unit_price || 0})"`;
 
     const categoryHtml = product.category
         ? `<div class="mt-1"><small class="text-muted" style="font-size: 0.65rem;">${escapeHtml(product.category)}</small></div>`
@@ -653,7 +671,7 @@ function buildProductCard(product) {
         data-name="${escapeHtml((product.name || '').toLowerCase())}"
         data-code="${escapeHtml((product.code || '').toLowerCase())}"
         data-category="${escapeHtml(product.category)}">
-        <div class="card h-100 product-card ${cardClass}" ${clickHandler}>
+        <div class="card h-100 product-card ${cardClass}">
             <div class="card-body text-center p-2">
                 <div class="mb-1"><i class="bx bx-package fs-4 text-primary"></i></div>
                 <h6 class="mb-1" style="font-size: 0.8rem; line-height: 1.2;">${escapeHtml(product.name)}</h6>
@@ -694,6 +712,7 @@ async function loadPosProducts(reset = false) {
     if (reset) {
         posProductsState.page = 1;
         posProductsState.hasMore = true;
+        posProductCache.clear();
         document.getElementById('productGrid').innerHTML = '';
         setProductGridEmpty(false);
     }
@@ -755,6 +774,20 @@ function schedulePosProductSearch() {
 document.addEventListener('DOMContentLoaded', function() {
     loadPosProducts(true);
 
+    document.getElementById('productGrid').addEventListener('click', function(event) {
+        const card = event.target.closest('.product-card-clickable');
+        if (!card) {
+            return;
+        }
+
+        const productItem = card.closest('.product-item');
+        const productId = parseInt(productItem?.dataset.id, 10);
+        const product = posProductCache.get(productId);
+        if (product) {
+            openPosProductModal(product);
+        }
+    });
+
     const scrollContainer = document.querySelector('#productsPanel .products-scroll-container');
     if (scrollContainer) {
         scrollContainer.addEventListener('scroll', function() {
@@ -794,18 +827,7 @@ async function openPosProductByCode(code) {
         return false;
     }
 
-    showItemModal(
-        product.id,
-        product.name,
-        product.unit_price,
-        product.current_stock,
-        product.vat_type,
-        product.vat_rate,
-        product.item_type,
-        product.track_stock,
-        product.has_wholesale,
-        product.wholesale_unit_price || 0
-    );
+    openPosProductModal(product);
 
     return true;
 }
