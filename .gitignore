@@ -1,2 +1,66 @@
+# Environment
 .env
-smartpos-mobile/
+.env.*
+!.env.example
+
+# Dependencies
+/vendor
+/node_modules
+
+# Build assets
+/public/build
+/public/hot
+/public/storage
+
+# Laravel storage (keep directory structure, ignore generated files)
+/storage/*.key
+/storage/app/*
+!/storage/app/.gitignore
+!/storage/app/public/
+/storage/app/public/*
+!/storage/app/public/.gitignore
+/storage/app/private/*
+!/storage/app/private/.gitignore
+/storage/framework/cache/data/*
+!/storage/framework/cache/data/.gitignore
+/storage/framework/sessions/*
+!/storage/framework/sessions/.gitignore
+/storage/framework/testing/*
+!/storage/framework/testing/.gitignore
+/storage/framework/views/*
+!/storage/framework/views/.gitignore
+/storage/logs/*
+!/storage/logs/.gitignore
+
+# Bootstrap cache
+/bootstrap/cache/*
+!/bootstrap/cache/.gitignore
+
+# Logs & debug
+*.log
+npm-debug.log
+yarn-error.log
+
+# PHPUnit / testing
+.phpunit.result.cache
+.phpunit.cache
+
+# IDE & OS
+/.idea
+/.vscode
+/.fleet
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Composer auth (if used for private packages)
+/auth.json
+
+# Homestead
+Homestead.json
+Homestead.yaml
+
+# Project-specific
+/smartpos-mobile/
