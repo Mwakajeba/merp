@@ -36,6 +36,7 @@
                             $posListCount = $posSaleMode === 'bill' ? 0 : $posListCountQuery->visibleToUser()->count();
                         @endphp
                         <div class="row">
+                            @can('view customers')
                             <div class="col-md-6 col-lg-3 mb-4">
                                 <div class="card border-primary position-relative h-100">
                                     <div class="card-body text-center">
@@ -47,15 +48,15 @@
                                         </div>
                                         <h5 class="card-title">Customers</h5>
                                         <p class="card-text">Register and manage customer details.</p>
-                                        @can('view customers')
                                         <a href="{{ route('customers.index') }}" class="btn btn-primary">
                                             <i class="bx bx-list-ul me-1"></i> Customers
                                         </a>
-                                        @endcan
                                     </div>
                                 </div>
                             </div>
+                            @endcan
 
+                            @can('view sales invoices')
                             <div class="col-md-6 col-lg-3 mb-4">
                                 <div class="card border-danger position-relative h-100">
                                     <div class="card-body text-center">
@@ -67,14 +68,13 @@
                                         </div>
                                         <h5 class="card-title">Sales Invoices</h5>
                                         <p class="card-text">Create and manage sales invoices.</p>
-                                        @can('view sales invoices')
                                         <a href="{{ route('sales.invoices.index') }}" class="btn btn-danger">
                                             <i class="bx bx-receipt me-1"></i> Sales Invoices
                                         </a>
-                                        @endcan
                                     </div>
                                 </div>
                             </div>
+                            @endcan
 
                             <div class="col-md-6 col-lg-3 mb-4">
                                 <div class="card border-info position-relative h-100">

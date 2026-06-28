@@ -1264,7 +1264,7 @@ class RolePermissionSeeder extends Seeder
             'name' => 'sales-person',
             'guard_name' => 'web'
         ]);
-        $salesPersonRole->description = 'Sales person with sales and customer access';
+        $salesPersonRole->description = 'Sales person with POS and sales order access';
         $salesPersonRole->save();
 
         $salesPersonPermissions = [
@@ -1275,11 +1275,6 @@ class RolePermissionSeeder extends Seeder
             'view cash sales',
             'create cash sales',
             'edit cash sales',
-            'view sales invoices',
-            'create sales invoices',
-            'edit sales invoices',
-            'record sales payment',
-            'access pos cashier',
             'access pos list',
             'view sales proformas',
             'create sales proforma',
@@ -1290,11 +1285,6 @@ class RolePermissionSeeder extends Seeder
             'view deliveries',
             'create delivery',
             'edit delivery',
-            'view customers',
-            'create customer',
-            'edit customer',
-            'view customer profile',
-            'view customer history',
             'view collections',
             'create collection',
             'view payment history',

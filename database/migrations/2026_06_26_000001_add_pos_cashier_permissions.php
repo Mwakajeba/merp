@@ -40,11 +40,6 @@ return new class extends Migration
         if ($accountant) {
             $accountant->givePermissionTo($this->permissions);
         }
-
-        $salesPerson = Role::where('name', 'sales-person')->where('guard_name', 'web')->first();
-        if ($salesPerson) {
-            $salesPerson->givePermissionTo(['access pos cashier']);
-        }
     }
 
     public function down(): void
