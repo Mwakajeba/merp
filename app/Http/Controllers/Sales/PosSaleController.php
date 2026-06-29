@@ -229,6 +229,7 @@ class PosSaleController extends Controller
         $payload = $bills->map(function (SalesInvoice $bill) use ($autoPrint) {
             $currency = strtoupper($bill->currency ?? 'TZS');
             $balanceDue = (float) $bill->balance_due;
+            $paidAmount = (float) $bill->paid_amount;
             $isPaid = $balanceDue <= 0 || in_array($bill->status, ['paid', 'cancelled'], true);
 
             return [
@@ -238,6 +239,7 @@ class PosSaleController extends Controller
                 'invoice_time' => format_datetime($bill->invoice_date ?? $bill->created_at, 'H:i'),
                 'invoice_date' => format_datetime($bill->invoice_date ?? $bill->created_at, 'M d, Y'),
                 'total_amount' => (float) $bill->total_amount,
+                'paid_amount' => $paidAmount,
                 'balance_due' => $balanceDue,
                 'currency' => $currency,
                 'is_paid' => $isPaid,
@@ -246,9 +248,17 @@ class PosSaleController extends Controller
             ];
         })->values();
 
+        $currency = strtoupper($payload->first()['currency'] ?? 'TZS');
+
         return response()->json([
             'bills' => $payload,
             'count' => $payload->count(),
+            'summary' => [
+                'total_bills' => round((float) $bills->sum('total_amount'), 2),
+                'paid' => round((float) $bills->sum('paid_amount'), 2),
+                'outstanding' => round((float) $bills->sum('balance_due'), 2),
+                'currency' => $currency,
+            ],
         ]);
     }
 

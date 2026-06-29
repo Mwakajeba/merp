@@ -233,6 +233,26 @@
                         @if(($posSaleMode ?? 'direct') === 'bill')
                         <div id="todayBillsPanel" class="d-none">
                             <div class="products-scroll-container" style="height: 500px; overflow-y: auto; border: 1px solid #e9ecef; border-radius: 8px; padding: 15px;">
+                                <div id="todayBillsSummary" class="row g-2 mb-3 d-none">
+                                    <div class="col-4">
+                                        <div class="border rounded p-2 text-center bg-light">
+                                            <small class="text-muted d-block">Total Bills</small>
+                                            <span class="fw-bold" id="todayBillsTotal">0.00</span>
+                                        </div>
+                                    </div>
+                                    <div class="col-4">
+                                        <div class="border rounded p-2 text-center bg-light">
+                                            <small class="text-muted d-block">Paid</small>
+                                            <span class="fw-bold text-success" id="todayBillsPaid">0.00</span>
+                                        </div>
+                                    </div>
+                                    <div class="col-4">
+                                        <div class="border rounded p-2 text-center bg-light">
+                                            <small class="text-muted d-block">Outstanding</small>
+                                            <span class="fw-bold text-danger" id="todayBillsOutstanding">0.00</span>
+                                        </div>
+                                    </div>
+                                </div>
                                 <div id="todayBillsLoading" class="text-center py-4">
                                     <div class="spinner-border text-primary" role="status">
                                         <span class="visually-hidden">Loading...</span>
@@ -620,19 +640,64 @@ function formatExpiryBadge(expiryDate) {
     </div>`;
 }
 
-function openPosProductModal(product) {
-    showItemModal(
-        product.id,
-        product.name,
-        product.unit_price,
-        product.current_stock,
-        product.vat_type,
-        product.vat_rate,
-        product.item_type,
-        product.track_stock,
-        product.has_wholesale,
-        product.wholesale_unit_price || 0
+function addProductToCart(product) {
+    if (!product || product.is_out_of_stock) {
+        return;
+    }
+
+    const saleCurrency = getCurrentSaleCurrency();
+    const exchangeRate = getCurrentExchangeRate();
+    const retailBase = parseFloat(product.unit_price) || 0;
+    const convertedPrice = convertItemPrice(retailBase, saleCurrency, exchangeRate);
+    const vatType = product.vat_type || posProductsConfig.defaultVatType || 'no_vat';
+    const vatRate = parseFloat(product.vat_rate ?? posProductsConfig.defaultVatRate) || 0;
+    const itemType = product.item_type || 'product';
+    const trackStock = product.track_stock !== false && product.item_type !== 'service';
+    const stock = parseFloat(product.current_stock) || 0;
+    const priceTier = 'retail';
+    const increment = 1;
+
+    const existingIndex = cart.findIndex(
+        (item) => item.id === product.id && (item.price_tier || 'retail') === priceTier
     );
+
+    if (existingIndex >= 0) {
+        const newQuantity = cart[existingIndex].quantity + increment;
+        if (trackStock && newQuantity > stock) {
+            return;
+        }
+
+        cart[existingIndex].quantity = newQuantity;
+        cart[existingIndex].unit_price = convertedPrice;
+        cart[existingIndex].vat_type = vatType;
+        cart[existingIndex].vat_rate = vatRate;
+        cart[existingIndex].stock = stock;
+    } else {
+        if (trackStock && increment > stock) {
+            return;
+        }
+
+        cart.push({
+            id: product.id,
+            name: product.name,
+            quantity: increment,
+            unit_price: convertedPrice,
+            originalPrice: retailBase,
+            originalWholesalePrice: product.has_wholesale ? (parseFloat(product.wholesale_unit_price) || 0) : 0,
+            price_tier: priceTier,
+            vat_type: vatType,
+            vat_rate: vatRate,
+            stock: stock,
+            itemType: itemType,
+            trackStock: trackStock,
+        });
+    }
+
+    updateCartDisplay();
+}
+
+function openPosProductModal(product) {
+    addProductToCart(product);
 }
 
 function buildProductCard(product) {
@@ -855,13 +920,17 @@ function buildTodayBillCard(bill) {
                     <i class="bx bx-user me-1 text-muted"></i>
                     <span class="fw-semibold">${escapeHtml(bill.customer_name)}</span>
                 </div>
-                <div class="d-flex justify-content-between align-items-center">
+                <div class="d-flex justify-content-between align-items-center gap-2 flex-wrap">
                     <div>
                         <small class="text-muted d-block">Total</small>
                         <span class="fw-bold">${formatMoney(bill.total_amount, bill.currency)}</span>
                     </div>
+                    <div class="text-center">
+                        <small class="text-muted d-block">Paid</small>
+                        <span class="fw-bold text-success">${formatMoney(bill.paid_amount || 0, bill.currency)}</span>
+                    </div>
                     <div class="text-end">
-                        <small class="text-muted d-block">Balance</small>
+                        <small class="text-muted d-block">Outstanding</small>
                         <span class="fw-bold ${bill.is_paid ? 'text-success' : 'text-danger'}">${formatMoney(bill.balance_due, bill.currency)}</span>
                     </div>
                     <div>${printBtn}</div>
@@ -869,6 +938,28 @@ function buildTodayBillCard(bill) {
             </div>
         </div>
     </div>`;
+}
+
+function updateTodayBillsSummary(summary) {
+    const summaryEl = document.getElementById('todayBillsSummary');
+    const totalEl = document.getElementById('todayBillsTotal');
+    const paidEl = document.getElementById('todayBillsPaid');
+    const outstandingEl = document.getElementById('todayBillsOutstanding');
+
+    if (!summaryEl || !totalEl || !paidEl || !outstandingEl) {
+        return;
+    }
+
+    if (!summary) {
+        summaryEl.classList.add('d-none');
+        return;
+    }
+
+    const currency = summary.currency || 'TZS';
+    totalEl.textContent = formatMoney(summary.total_bills || 0, currency);
+    paidEl.textContent = formatMoney(summary.paid || 0, currency);
+    outstandingEl.textContent = formatMoney(summary.outstanding || 0, currency);
+    summaryEl.classList.remove('d-none');
 }
 
 async function loadTodayBills(force = false) {
@@ -912,14 +1003,17 @@ async function loadTodayBills(force = false) {
         }
 
         if (bills.length === 0) {
+            updateTodayBillsSummary(null);
             emptyEl.classList.remove('d-none');
         } else {
+            updateTodayBillsSummary(data.summary || null);
             listEl.innerHTML = bills.map(buildTodayBillCard).join('');
         }
 
         todayBillsLoaded = true;
     } catch (error) {
         console.error(error);
+        updateTodayBillsSummary(null);
         emptyEl.classList.remove('d-none');
         emptyEl.querySelector('p').textContent = 'Failed to load today\'s bills';
     } finally {
@@ -1014,8 +1108,19 @@ function processQRCodeData(qrData) {
                 scannerModal.hide();
             }
             
-            // Open the item modal with scanned data
-            showItemModal(itemId, itemName, unitPrice, stock, vatType, vatRate, itemType, trackStock);
+            // Add scanned item directly to cart
+            addProductToCart({
+                id: itemId,
+                name: itemName,
+                unit_price: unitPrice,
+                current_stock: stock,
+                vat_type: vatType,
+                vat_rate: vatRate,
+                item_type: itemType,
+                track_stock: trackStock,
+                has_wholesale: false,
+                wholesale_unit_price: 0,
+            });
             
             return true;
         } else {
@@ -1612,12 +1717,6 @@ function addItemToCart() {
     const vatRate = parseFloat(document.getElementById('modalVatRate').value);
     
     if (quantity <= 0 || unitPrice <= 0) {
-        Swal.fire({
-            icon: 'warning',
-            title: 'Invalid Input',
-            text: 'Please enter valid quantity and unit price',
-            confirmButtonColor: '#3085d6'
-        });
         return;
     }
     
@@ -1626,12 +1725,6 @@ function addItemToCart() {
     const trackStock = currentItem.trackStock !== undefined ? currentItem.trackStock : (currentItem.track_stock !== undefined ? currentItem.track_stock : true);
     
     if ((itemType !== 'service' && trackStock) && quantity > currentItem.stock) {
-        Swal.fire({
-            icon: 'error',
-            title: 'Insufficient Stock',
-            text: `Available stock: ${currentItem.stock} units`,
-            confirmButtonColor: '#d33'
-        });
         return;
     }
     
@@ -1663,31 +1756,20 @@ function addItemToCart() {
     // Check if item already exists in cart
     const existingIndex = cart.findIndex(item => item.id === cartItem.id && (item.price_tier || 'retail') === cartItem.price_tier);
     if (existingIndex >= 0) {
-        // Update quantity and also update VAT type/rate in case they changed
         cart[existingIndex].quantity += quantity;
-        cart[existingIndex].vat_type = vatType; // Update VAT type
-        cart[existingIndex].vat_rate = vatRate; // Update VAT rate
-        cart[existingIndex].unit_price = unitPrice; // Update unit price in case it changed
-        Swal.fire({
-            icon: 'info',
-            title: 'Item Updated',
-            text: `Quantity updated for ${cartItem.name}`,
-            timer: 1500,
-            showConfirmButton: false
-        });
+        cart[existingIndex].vat_type = vatType;
+        cart[existingIndex].vat_rate = vatRate;
+        cart[existingIndex].unit_price = unitPrice;
     } else {
         cart.push(cartItem);
-        Swal.fire({
-            icon: 'success',
-            title: 'Item Added',
-            text: `${cartItem.name} added to cart`,
-            timer: 1500,
-            showConfirmButton: false
-        });
     }
     
     updateCartDisplay();
-    bootstrap.Modal.getInstance(document.getElementById('itemModal')).hide();
+    const modalEl = document.getElementById('itemModal');
+    const modalInstance = bootstrap.Modal.getInstance(modalEl);
+    if (modalInstance) {
+        modalInstance.hide();
+    }
 }
 
 // Update cart display

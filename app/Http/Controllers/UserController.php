@@ -189,14 +189,13 @@ class UserController extends Controller
                     ->withInput($request->except(['password', 'password_confirmation']));
             }
 
-            // Create user directly
+            // Create user directly (branch is assigned via branch_user pivot below)
             $user = User::create([
                     'name' => $request->name,
                     'phone' => $this->formatPhoneNumber($request->phone),
                     'email' => $request->filled('email') ? $request->email : null,
                     'password' => Hash::make('12345'),
                     'company_id' => $companyId,
-                    'branch_id' => $branch->id,
                     'status' => $request->status,
                     'is_active' => $request->status === 'active' ? 'yes' : 'no',
                 ]);
