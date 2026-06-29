@@ -1071,6 +1071,10 @@ class PosSaleController extends Controller
             'operator'
         ])->findOrFail($posSaleId);
 
+        if (!$this->userCanPrintPosReceipt($posSale)) {
+            abort(403, 'Unauthorized action.');
+        }
+
         // Mark as printed
         $posSale->update(['receipt_printed' => true]);
 
@@ -1597,5 +1601,22 @@ class PosSaleController extends Controller
                 'message' => 'Failed to record payment: ' . $e->getMessage(),
             ], 422);
         }
+    }
+
+    private function userCanPrintPosReceipt(PosSale $posSale): bool
+    {
+        $user = Auth::user();
+
+        if ($posSale->company_id && $user->company_id && (int) $posSale->company_id !== (int) $user->company_id) {
+            return false;
+        }
+
+        if ($user->can('view sales invoices') || $user->can('generate receipts')) {
+            return true;
+        }
+
+        $ownerId = (int) ($posSale->operator_id ?? $posSale->created_by);
+
+        return $user->can('create sales') && $ownerId === (int) $user->id;
     }
 }

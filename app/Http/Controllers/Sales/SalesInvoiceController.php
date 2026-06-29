@@ -15,6 +15,7 @@ use App\Models\Journal;
 use App\Models\GlTransaction;
 use App\Services\InventoryCostService;
 use App\Services\FxTransactionRateService;
+use App\Services\Sales\PosBillService;
 use App\Mail\SalesInvoiceMail;
 use App\Traits\GetsCurrenciesFromFxRates;
 use App\Models\BankAccount;
@@ -3169,13 +3170,9 @@ class SalesInvoiceController extends Controller
      */
     public function posReceipt(string $encodedId)
     {
-        if (!auth()->user()->can('view sales invoices')) {
-            abort(403, 'Unauthorized action.');
-        }
-
         $invoiceId = Hashids::decode($encodedId)[0] ?? null;
         if (!$invoiceId) {
-            return redirect()->route('sales.invoices.index')->with('error', 'Invalid invoice ID');
+            return redirect()->route('sales.pos.index')->with('error', 'Invalid invoice ID');
         }
 
         $invoice = SalesInvoice::with([
@@ -3185,7 +3182,34 @@ class SalesInvoiceController extends Controller
             'company',
         ])->findOrFail($invoiceId);
 
+        if (!$this->userCanPrintPosReceipt($invoice)) {
+            abort(403, 'Unauthorized action.');
+        }
+
         return view('sales.invoices.pos-receipt', compact('invoice'));
+    }
+
+    private function userCanPrintPosReceipt(SalesInvoice $invoice): bool
+    {
+        $user = auth()->user();
+
+        if ($invoice->company_id && $user->company_id && (int) $invoice->company_id !== (int) $user->company_id) {
+            return false;
+        }
+
+        if ($user->can('view sales invoices')) {
+            return true;
+        }
+
+        if ($invoice->reference_no !== PosBillService::REFERENCE_NO) {
+            return false;
+        }
+
+        if ($user->can('generate receipts')) {
+            return true;
+        }
+
+        return $user->can('create sales') && (int) $invoice->created_by === (int) $user->id;
     }
 
     /**
