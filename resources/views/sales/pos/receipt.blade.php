@@ -308,7 +308,7 @@
                 <span>{{ $posSale->sale_date ? $posSale->sale_date->format('d/m/Y H:i') : 'N/A' }}</span>
             </div>
             <div>
-                <span class="label">Customer:</span>
+                <span class="label">Food Server:</span>
                 <span>{{ $posSale->customer_name ?? 'Walk-in Customer' }}</span>
             </div>
             <div>
@@ -400,10 +400,6 @@
                 <span>{{ $posSale->bank_account->name ?? 'N/A' }}</span>
             </div>
             @endif
-            <div>
-                <span class="label">Amount Paid:</span>
-                <span class="text-bold">{{ number_format($posSale->total_amount, 2) }} TZS</span>
-            </div>
             @if($posSale->currency && $posSale->currency !== 'TZS')
             <div>
                 <span class="label">Currency:</span>

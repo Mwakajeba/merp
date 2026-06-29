@@ -159,7 +159,7 @@
                 <span>{{ $invoice->invoice_date?->format('d/m/Y') ?? 'N/A' }}</span>
             </div>
             <div>
-                <span class="label">Customer:</span>
+                <span class="label">Food Server:</span>
                 <span>{{ $invoice->customer->name ?? 'N/A' }}</span>
             </div>
             @if($invoice->reference_no)
@@ -202,14 +202,6 @@
             <div class="row final">
                 <span>TOTAL:</span>
                 <span>{{ number_format((float) $invoice->total_amount, 2) }} {{ $currency }}</span>
-            </div>
-            <div class="row">
-                <span>Paid:</span>
-                <span>{{ number_format((float) $invoice->paid_amount, 2) }} {{ $currency }}</span>
-            </div>
-            <div class="row">
-                <span>Balance:</span>
-                <span>{{ number_format((float) $invoice->balance_due, 2) }} {{ $currency }}</span>
             </div>
         </div>
 
