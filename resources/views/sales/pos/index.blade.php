@@ -1,5 +1,9 @@
 @extends('layouts.main')
 
+@if(($posSaleMode ?? 'direct') === 'bill')
+@section('wrapper-class', 'toggled')
+@endif
+
 @section('title', 'Point of Sale')
 
 @push('head-meta')
@@ -574,6 +578,14 @@ function getBillCustomerName() {
 
 // Initialize
 document.addEventListener('DOMContentLoaded', function() {
+    if (posSaleMode === 'bill') {
+        $(".sidebar-wrapper").hover(function () {
+            $(".wrapper").addClass("sidebar-hovered");
+        }, function () {
+            $(".wrapper").removeClass("sidebar-hovered");
+        });
+    }
+
     updateCartDisplay();
     
     // Initialize Select2 for currency dropdown

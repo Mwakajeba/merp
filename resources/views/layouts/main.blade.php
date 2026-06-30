@@ -46,7 +46,7 @@
 </head>
 
 <body>
-    <div class="wrapper">
+    <div class="wrapper @yield('wrapper-class')">
         {{-- Include Navigation and Header --}}
         @include('incs.sideMenu')
         @include('incs.navBar')
