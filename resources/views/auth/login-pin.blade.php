@@ -29,12 +29,6 @@
                                         </div>
                                     @endif
 
-                                    @if (request()->boolean('expired'))
-                                        <div class="alert alert-warning py-2 text-center">
-                                            {{ __('app.session_expired') }}
-                                        </div>
-                                    @endif
-
                                     <form method="POST" action="{{ route('login.pin.submit') }}" id="pinLoginForm">
                                         @csrf
                                         <input type="hidden" name="pin" id="pin" value="{{ old('pin') }}">

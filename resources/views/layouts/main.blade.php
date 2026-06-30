@@ -188,30 +188,11 @@
                     }
                 }
 
-                function handleExpired(message) {
+                function handleExpired() {
                     if (redirecting) return;
                     redirecting = true;
                     stopSpinners();
-
-                    const loginUrl = @json(route('login')) + '?expired=1';
-                    const text = message || @json(__('app.session_expired'));
-                    const title = @json(__('app.session_expired_title'));
-
-                    if (typeof Swal !== 'undefined') {
-                        Swal.fire({
-                            icon: 'warning',
-                            title: title,
-                            text: text,
-                            confirmButtonText: @json(__('app.sign_in')),
-                            allowOutsideClick: false,
-                            allowEscapeKey: false,
-                        }).then(function () {
-                            window.location.href = loginUrl;
-                        });
-                    } else {
-                        alert(text);
-                        window.location.href = loginUrl;
-                    }
+                    window.location.href = @json(route('login')) + '?expired=1';
                 }
 
                 return { isExpired, handleExpired, stopSpinners };

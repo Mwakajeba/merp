@@ -38,12 +38,6 @@
                                     </div>
                                 @endif
 
-                                @if (request()->boolean('expired'))
-                                    <div class="alert alert-warning">
-                                        {{ __('app.session_expired') }}
-                                    </div>
-                                @endif
-
                                 <form class="row g-3" method="POST" action="{{ url('/login') }}">
                                     @csrf
                                     <div class="col-12">

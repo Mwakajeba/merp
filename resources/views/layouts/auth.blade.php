@@ -3,6 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <link rel="icon" href="{{ asset('assets/images/favicon-32x32.png') }}" type="image/png" />
 
     <!-- Plugins -->
@@ -72,7 +73,28 @@
             timer: 2000
         });
     </script>
-@endif
+    @endif
+    <script nonce="{{ $cspNonce ?? '' }}">
+        (function () {
+            const params = new URLSearchParams(window.location.search);
+            if (params.get('expired') !== '1') {
+                return;
+            }
+
+            const cleanUrl = window.location.pathname + (window.location.hash || '');
+
+            Swal.fire({
+                icon: 'warning',
+                title: @json(__('app.session_expired_title')),
+                text: @json(__('app.session_expired')),
+                confirmButtonText: @json(__('app.sign_in')),
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+            }).then(function () {
+                window.location.replace(cleanUrl);
+            });
+        })();
+    </script>
     @stack('scripts')
 </body>
 </html>

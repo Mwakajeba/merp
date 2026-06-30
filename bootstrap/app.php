@@ -68,8 +68,26 @@ return Application::configure(basePath: dirname(__DIR__))
                 $middleware->append(\App\Http\Middleware\CheckMenuAccess::class);
             })
     ->withExceptions(function (Exceptions $exceptions): void {
+        $exceptions->render(function (\Illuminate\Session\TokenMismatchException $e, $request) {
+            $loginUrl = route('login', ['expired' => 1]);
+
+            if ($request->expectsJson() || $request->ajax()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => __('app.session_expired'),
+                    'redirect' => $loginUrl,
+                ], 419);
+            }
+
+            return redirect($loginUrl);
+        });
+
         // Handle exceptions gracefully
         $exceptions->render(function (Throwable $e, $request) {
+            if ($e instanceof \Illuminate\Session\TokenMismatchException) {
+                return null;
+            }
+
             // Log the exception
             \Log::error('Exception occurred', [
                 'message' => $e->getMessage(),

@@ -77,7 +77,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
         if (seconds <= 0) {
             clearInterval(timerInterval);
-            window.location.href = "{{ url('/login?expired=1') }}";
+            window.location.href = "{{ route('login.phone', ['expired' => 1]) }}";
         }
 
         seconds--;
