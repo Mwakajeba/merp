@@ -1388,10 +1388,9 @@ class PosSaleController extends Controller
             })
             ->get();
 
-        $posAutoPrintReceipt = (bool) SystemSetting::getValue('pos_auto_print_receipt', true);
         $canViewAllBills = Auth::user()->can('view all pos bills');
 
-        return view('sales.pos.cashier', compact('bankAccounts', 'posAutoPrintReceipt', 'canViewAllBills'));
+        return view('sales.pos.cashier', compact('bankAccounts', 'canViewAllBills'));
     }
 
     /**

@@ -114,7 +114,6 @@
 <script src="{{ asset('assets/plugins/datatable/js/jquery.dataTables.min.js') }}"></script>
 <script src="{{ asset('assets/plugins/datatable/js/dataTables.bootstrap5.min.js') }}"></script>
 <script nonce="{{ $cspNonce ?? '' }}">
-const posAutoPrintReceipt = @json($posAutoPrintReceipt);
 const openBillsUrl = @json(route('sales.pos.cashier.open-bills'));
 const payBillBaseUrl = @json(url('sales/pos/bills'));
 let billsTable = null;
@@ -285,7 +284,6 @@ async function paySelectedBills() {
 
     const paid = [];
     const failed = [];
-    let lastReceiptUrl = null;
 
     for (let index = 0; index < payments.length; index++) {
         const payment = payments[index];
@@ -294,21 +292,14 @@ async function paySelectedBills() {
         });
 
         try {
-            const data = await paySingleBill(payment.bill.id, bankAccountId, payment.amount);
+            await paySingleBill(payment.bill.id, bankAccountId, payment.amount);
             paid.push(payment.bill.invoice_number);
-            if (data.receipt_url) {
-                lastReceiptUrl = data.receipt_url;
-            }
         } catch (error) {
             failed.push({
                 invoice_number: payment.bill.invoice_number,
                 message: error.message || 'Payment failed',
             });
         }
-    }
-
-    if (paid.length && posAutoPrintReceipt && lastReceiptUrl && paid.length === 1) {
-        window.open(lastReceiptUrl, '_blank', 'width=400,height=600');
     }
 
     if (!failed.length) {
