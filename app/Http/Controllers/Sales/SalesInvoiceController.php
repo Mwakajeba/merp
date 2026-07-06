@@ -72,6 +72,9 @@ class SalesInvoiceController extends Controller
                 ->when(!auth()->user()->can('view all sales invoices'), function ($query) {
                     $query->where('created_by', auth()->id());
                 })
+                ->when($request->filled('payment_status'), function ($query) use ($request) {
+                    $this->applyPaymentStatusFilter($query, $request->input('payment_status'));
+                })
                 ->select(['id', 'invoice_number', 'reference_no', 'customer_id', 'invoice_date', 'due_date', 'status', 'total_amount', 'paid_amount', 'balance_due', 'currency', 'branch_id', 'created_by', 'created_at']);
 
             return datatables($invoices)
@@ -174,6 +177,18 @@ class SalesInvoiceController extends Controller
             })->sum('balance_due');
 
         return view('sales.invoices.index', compact('totalInvoices', 'totalAmount', 'totalPaid', 'totalOutstanding'));
+    }
+
+    private function applyPaymentStatusFilter($query, ?string $paymentStatus): void
+    {
+        match ($paymentStatus) {
+            'sent' => $query->where('paid_amount', '<=', 0)
+                ->whereIn('status', ['sent', 'overdue']),
+            'partial_paid' => $query->where('paid_amount', '>', 0)
+                ->whereRaw('paid_amount < total_amount'),
+            'full_paid' => $query->whereRaw('paid_amount >= total_amount'),
+            default => null,
+        };
     }
 
     /**

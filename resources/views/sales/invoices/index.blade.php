@@ -166,6 +166,22 @@
             <div class="col-12">
                 <div class="card radius-10">
                     <div class="card-body">
+                        <div class="row mb-3">
+                            <div class="col-md-3">
+                                <label for="filter-payment-status" class="form-label">Status</label>
+                                <select id="filter-payment-status" class="form-select">
+                                    <option value="">All Statuses</option>
+                                    <option value="sent">Sent</option>
+                                    <option value="partial_paid">Partial Paid</option>
+                                    <option value="full_paid">Full Paid</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3 d-flex align-items-end">
+                                <button type="button" class="btn btn-secondary" id="filter-reset">
+                                    <i class="bx bx-refresh me-1"></i>Reset
+                                </button>
+                            </div>
+                        </div>
                         <div class="table-responsive">
                             <table id="sales-invoices-table" class="table table-striped table-bordered dt-responsive nowrap" style="border-collapse: collapse; border-spacing: 0; width: 100%;">
                                 <thead class="table-light">
@@ -203,7 +219,10 @@ $(document).ready(function() {
         serverSide: true,
         ajax: {
             url: '{{ route("sales.invoices.index") }}',
-            type: 'GET'
+            type: 'GET',
+            data: function(d) {
+                d.payment_status = $('#filter-payment-status').val();
+            }
         },
         columns: [
             {data: 'invoice_number', name: 'invoice_number'},
@@ -233,6 +252,15 @@ $(document).ready(function() {
             // Update dashboard stats after data load
             updateDashboardStats();
         }
+    });
+
+    $('#filter-payment-status').on('change', function() {
+        table.ajax.reload();
+    });
+
+    $('#filter-reset').on('click', function() {
+        $('#filter-payment-status').val('');
+        table.ajax.reload();
     });
 
     // Function to update dashboard stats
