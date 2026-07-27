@@ -508,12 +508,12 @@
                 </div>
                 <div class="mb-3">
                     <label for="modalQuantity" class="form-label">Quantity</label>
-                    <input type="number" class="form-control" id="modalQuantity" min="0.01" step="0.01" value="1" max="999999" oninput="updateVatCalculation()" onchange="validateQuantity()">
-                    <small class="text-muted">Maximum available: <span id="maxQuantity">0</span></small>
+                    <input type="number" class="form-control" id="modalQuantity" min="0.01" step="0.01" value="1" max="999999" onchange="validateQuantity()">
+                    <small class="text-muted">Maximum available: <span id="maxQuantity">0</span> units</small>
                 </div>
                 <div class="mb-3">
                     <label for="modalUnitPrice" class="form-label">Unit Price (TZS)</label>
-                    <input type="number" class="form-control" id="modalUnitPrice" min="0" step="0.01" oninput="updateVatCalculation()" onchange="updateVatCalculation()">
+                    <input type="number" class="form-control" id="modalUnitPrice" min="0" step="100">
                 </div>
                 <div class="mb-3" id="modalPriceTierRow" style="display: none;">
                     <label for="modal_price_tier_pos" class="form-label">Price type</label>
@@ -709,30 +709,7 @@ function addProductToCart(product) {
 }
 
 function openPosProductModal(product) {
-    if (!product || product.is_out_of_stock) {
-        return;
-    }
-
-    const vatType = product.vat_type || posProductsConfig.defaultVatType || 'no_vat';
-    const vatRate = parseFloat(product.vat_rate ?? posProductsConfig.defaultVatRate) || 0;
-    const itemType = product.item_type || 'product';
-    const trackStock = product.track_stock !== false && product.item_type !== 'service';
-    const stock = parseFloat(product.current_stock) || 0;
-    const hasWholesale = !!product.has_wholesale;
-    const wholesaleUnitPrice = parseFloat(product.wholesale_unit_price) || 0;
-
-    showItemModal(
-        product.id,
-        product.name,
-        parseFloat(product.unit_price) || 0,
-        stock,
-        vatType,
-        vatRate,
-        itemType,
-        trackStock,
-        hasWholesale,
-        wholesaleUnitPrice
-    );
+    addProductToCart(product);
 }
 
 function buildProductCard(product) {
