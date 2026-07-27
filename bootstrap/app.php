@@ -68,6 +68,11 @@ return Application::configure(basePath: dirname(__DIR__))
                 $middleware->append(\App\Http\Middleware\CheckMenuAccess::class);
             })
     ->withExceptions(function (Exceptions $exceptions): void {
+        // Benign browser / tooling 404s (Chrome DevTools, missing source maps, etc.)
+        $exceptions->dontReport([
+            \Symfony\Component\HttpKernel\Exception\NotFoundHttpException::class,
+        ]);
+
         $exceptions->render(function (\Illuminate\Session\TokenMismatchException $e, $request) {
             $loginUrl = route('login', ['expired' => 1]);
 
@@ -88,16 +93,22 @@ return Application::configure(basePath: dirname(__DIR__))
                 return null;
             }
 
-            // Log the exception
-            \Log::error('Exception occurred', [
-                'message' => $e->getMessage(),
-                'file' => $e->getFile(),
-                'line' => $e->getLine(),
-                'trace' => $e->getTraceAsString(),
-            ]);
+            // Do not log routine 404s (source maps, .well-known probes, unknown routes)
+            if (! $e instanceof \Symfony\Component\HttpKernel\Exception\NotFoundHttpException) {
+                \Log::error('Exception occurred', [
+                    'message' => $e->getMessage(),
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine(),
+                    'trace' => $e->getTraceAsString(),
+                ]);
+            }
 
-            // For AJAX requests, return JSON response
+            // For AJAX requests, return JSON with the correct HTTP status
             if ($request->expectsJson() || $request->ajax()) {
+                $status = $e instanceof \Symfony\Component\HttpKernel\Exception\HttpExceptionInterface
+                    ? $e->getStatusCode()
+                    : 500;
+
                 return response()->json([
                     'success' => false,
                     'message' => $e->getMessage(),
@@ -105,7 +116,7 @@ return Application::configure(basePath: dirname(__DIR__))
                         'file' => $e->getFile(),
                         'line' => $e->getLine(),
                     ] : null,
-                ], 500);
+                ], $status);
             }
 
             // For web requests, let Laravel handle it normally
