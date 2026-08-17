@@ -15,6 +15,7 @@ use App\Models\Inventory\Item;
 use App\Models\SystemSetting;
 use App\Services\FxTransactionRateService;
 use App\Services\Sales\PosBillService;
+use App\Services\Sales\PosReceiptPrintService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
@@ -215,6 +216,7 @@ class PosSaleController extends Controller
     {
         $branchId = session('branch_id') ?? (Auth::user()->branch_id ?? null);
         $autoPrint = (bool) SystemSetting::getValue('pos_auto_print_receipt', true);
+        $printService = app(PosReceiptPrintService::class);
 
         $bills = SalesInvoice::query()
             ->where('reference_no', PosBillService::REFERENCE_NO)
@@ -226,11 +228,13 @@ class PosSaleController extends Controller
             ->orderByDesc('id')
             ->get();
 
-        $payload = $bills->map(function (SalesInvoice $bill) use ($autoPrint) {
+        $payload = $bills->map(function (SalesInvoice $bill) use ($autoPrint, $printService) {
             $currency = strtoupper($bill->currency ?? 'TZS');
             $balanceDue = (float) $bill->balance_due;
             $paidAmount = (float) $bill->paid_amount;
             $isPaid = $balanceDue <= 0 || in_array($bill->status, ['paid', 'cancelled'], true);
+            $canPrintReceipt = $printService->hasRemainingPrints($bill)
+                || $printService->userCanBypassPrintLimit(Auth::user());
 
             return [
                 'encoded_id' => $bill->encoded_id,
@@ -244,7 +248,9 @@ class PosSaleController extends Controller
                 'currency' => $currency,
                 'is_paid' => $isPaid,
                 'status' => $isPaid ? 'paid' : 'unpaid',
-                'receipt_url' => $autoPrint ? route('sales.invoices.pos-receipt', $bill->encoded_id) : null,
+                'can_print_receipt' => $canPrintReceipt,
+                'receipt_print_count' => $printService->getPrintCount($bill),
+                'receipt_url' => ($autoPrint && $canPrintReceipt) ? route('sales.invoices.pos-receipt', $bill->encoded_id) : null,
             ];
         })->values();
 
@@ -722,7 +728,13 @@ class PosSaleController extends Controller
             'bankAccount'
         ])->findOrFail($posSaleId);
 
-        return view('sales.pos.show', compact('posSale'));
+        $printService = app(PosReceiptPrintService::class);
+        $canPrintReceipt = $printService->hasRemainingPrints($posSale)
+            || $printService->userCanBypassPrintLimit(Auth::user());
+        $receiptPrintCount = $printService->getPrintCount($posSale);
+        $maxReceiptPrints = $printService->getMaxPrints();
+
+        return view('sales.pos.show', compact('posSale', 'canPrintReceipt', 'receiptPrintCount', 'maxReceiptPrints'));
     }
 
     /**
@@ -1075,8 +1087,22 @@ class PosSaleController extends Controller
             abort(403, 'Unauthorized action.');
         }
 
-        // Mark as printed
-        $posSale->update(['receipt_printed' => true]);
+        $printService = app(PosReceiptPrintService::class);
+        $user = Auth::user();
+        $authorization = $printService->authorizePrint($user, $posSale);
+
+        if (!$authorization['allowed']) {
+            Auth::logout();
+            request()->session()->invalidate();
+            request()->session()->regenerateToken();
+
+            return view('sales.pos.print-blocked', [
+                'message' => $authorization['message'],
+            ]);
+        }
+
+        $printService->recordPrint($posSale);
+        $posSale->refresh();
 
         return view('sales.pos.receipt', compact('posSale'));
     }
@@ -1143,6 +1169,8 @@ class PosSaleController extends Controller
             $length = $request->input('length', 25);
             
             $posSales = $query->skip($start)->take($length)->get();
+            $printService = app(PosReceiptPrintService::class);
+            $currentUser = Auth::user();
 
             $data = [];
             foreach ($posSales as $index => $posSale) {
@@ -1166,6 +1194,12 @@ class PosSaleController extends Controller
                     }
                 }
                 
+                $canPrintReceipt = $printService->hasRemainingPrints($posSale)
+                    || $printService->userCanBypassPrintLimit($currentUser);
+                $printButton = $canPrintReceipt
+                    ? '<a href="' . route('sales.pos.receipt', $posSale->encoded_id) . '" class="btn btn-sm btn-outline-secondary" title="Print Receipt" target="_blank"><i class="bx bx-printer"></i></a>'
+                    : '';
+
                 $data[] = [
                     'sale_number' => '<a href="' . route('sales.pos.show', $posSale->encoded_id) . '" class="text-primary fw-bold">' . $posSale->pos_number . '</a>',
                     'customer_name' => $posSale->customer ? $posSale->customer->name : ($posSale->customer_name ?: 'Walk-in Customer'),
@@ -1177,7 +1211,7 @@ class PosSaleController extends Controller
                     'expiry_date' => $expiryDateDisplay,
                     'actions' => '<div class="d-flex gap-1">' .
                         '<a href="' . route('sales.pos.show', $posSale->encoded_id) . '" class="btn btn-sm btn-outline-info" title="View"><i class="bx bx-show"></i></a>' .
-                        '<a href="' . route('sales.pos.receipt', $posSale->encoded_id) . '" class="btn btn-sm btn-outline-secondary" title="Print Receipt" target="_blank"><i class="bx bx-printer"></i></a>' .
+                        $printButton .
                         '<a href="' . route('sales.pos.edit', $posSale->encoded_id) . '" class="btn btn-sm btn-outline-warning" title="Edit"><i class="bx bx-edit"></i></a>' .
                         '<button type="button" class="btn btn-sm btn-outline-danger" onclick="deletePosSale(\'' . $posSale->encoded_id . '\')" title="Delete"><i class="bx bx-trash"></i></button>' .
                         '</div>'
@@ -1487,6 +1521,8 @@ class PosSaleController extends Controller
         $length = (int) $request->input('length', 25);
 
         $bills = $query->skip($start)->take($length)->get();
+        $printService = app(PosReceiptPrintService::class);
+        $currentUser = Auth::user();
 
         $data = [];
         $canViewAllBills = Auth::user()->can('view all pos bills');
@@ -1495,6 +1531,12 @@ class PosSaleController extends Controller
             $customerName = $bill->customer->name ?? 'N/A';
             $encodedId = $bill->encoded_id;
             $currency = strtoupper($bill->currency ?? 'TZS');
+            $canPrintReceipt = $printService->hasRemainingPrints($bill)
+                || $printService->userCanBypassPrintLimit($currentUser);
+            $printButton = $canPrintReceipt
+                ? '<a href="' . route('sales.invoices.pos-receipt', $encodedId) . '" class="btn btn-sm btn-outline-secondary" title="Print bill" target="_blank">' .
+                    '<i class="bx bx-printer"></i></a>'
+                : '';
 
             $row = [
                 'invoice_number' => '<span class="fw-bold text-primary">' . e($bill->invoice_number) . '</span>',
@@ -1508,8 +1550,7 @@ class PosSaleController extends Controller
                     'data-customer-name="' . e($customerName) . '" ' .
                     'data-balance="' . (float) $bill->balance_due . '">' .
                     '<i class="bx bx-check"></i> Pay</button>' .
-                    '<a href="' . route('sales.invoices.pos-receipt', $encodedId) . '" class="btn btn-sm btn-outline-secondary" title="Print bill" target="_blank">' .
-                    '<i class="bx bx-printer"></i></a>' .
+                    $printButton .
                     '</div>',
             ];
 

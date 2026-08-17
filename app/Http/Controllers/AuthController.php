@@ -363,11 +363,19 @@ class AuthController extends Controller
         if ($user->status !== 'active' || $user->is_active !== 'yes') {
             Auth::logout();
 
+            $blockDescription = 'Login blocked - user account is inactive';
+            $blockMessage = 'Your account is inactive. Please contact the administrator.';
+
+            if ($user->status === 'suspended' && $user->status_reason === \App\Services\Sales\PosReceiptPrintService::BLOCK_REASON) {
+                $blockDescription = 'Login blocked - account suspended for unauthorized POS receipt reprint';
+                $blockMessage = 'Your account has been suspended because you attempted to print a POS receipt more than the allowed number of times. Please contact an administrator to reactivate your account.';
+            }
+
             ActivityLog::create([
                 'user_id'     => $user->id,
                 'model'       => 'Auth',
                 'action'      => 'login_blocked',
-                'description' => 'Login blocked - user account is inactive',
+                'description' => $blockDescription,
                 'ip_address'  => $request->ip(),
                 'device'      => $deviceString,
                 'activity_time' => now(),
@@ -376,7 +384,7 @@ class AuthController extends Controller
             LoginAttempt::record($lockoutKey, $request->ip(), $request->userAgent(), false);
 
             return back()->withErrors([
-                $errorKey => 'Your account is inactive. Please contact the administrator.',
+                $errorKey => $blockMessage,
             ])->withInput();
         }
 

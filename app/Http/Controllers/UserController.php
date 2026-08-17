@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Services\Sales\PosReceiptPrintService;
 use App\Models\Branch;
 use App\Models\Company;
 use App\Models\InventoryLocation;
@@ -85,7 +86,12 @@ class UserController extends Controller
                 } elseif ($user->status === 'inactive') {
                     return '<span class="badge bg-warning">' . __('app.inactive') . '</span>';
                 }
-                return '<span class="badge bg-danger">' . __('app.suspended') . '</span>';
+
+                $title = $user->status_reason === PosReceiptPrintService::BLOCK_REASON
+                    ? 'Suspended: unauthorized POS receipt reprint'
+                    : 'Suspended';
+
+                return '<span class="badge bg-danger" title="' . e($title) . '">' . __('app.suspended') . '</span>';
             })
             ->editColumn('created_at', function($user) {
                 return $user->created_at->format('M d, Y');
@@ -97,6 +103,14 @@ class UserController extends Controller
                 }
                 if (auth()->user()->can('edit user')) {
                     $actions .= '<a href="' . route('users.edit', $user) . '" class="btn btn-outline-primary" title="Edit"><i class="bx bx-edit"></i></a>';
+                }
+                $printService = app(PosReceiptPrintService::class);
+                if ($user->status === 'suspended' && $printService->isAdmin(auth()->user()) && auth()->user()->can('edit user')) {
+                    $csrfToken = csrf_token();
+                    $actions .= '<form action="' . route('users.activate-suspended', $user) . '" method="POST" style="display:inline-block;">'
+                        . '<input type="hidden" name="_token" value="' . $csrfToken . '">'
+                        . '<button type="submit" class="btn btn-outline-success" title="Reactivate suspended account"><i class="bx bx-user-check"></i></button>'
+                        . '</form>';
                 }
                 if (auth()->user()->can('delete user')) {
                     $hasGL = \App\Models\GlTransaction::where('user_id', $user->id)->exists();
@@ -309,12 +323,18 @@ class UserController extends Controller
         try {
             DB::beginTransaction();
 
+            $printService = app(PosReceiptPrintService::class);
+            $allowedStatuses = ['active', 'inactive'];
+            if ($user->status === 'suspended' && $printService->isAdmin(auth()->user())) {
+                $allowedStatuses[] = 'suspended';
+            }
+
             $rules = [
                 'name' => 'required|string|max:255',
                 'email' => 'nullable|email|max:255|unique:users,email,' . $user->id . ',id,company_id,' . current_company_id(),
                 'phone' => 'required|string|max:20|unique:users,phone,' . $user->id . ',id,company_id,' . current_company_id(),
                 'role_id' => 'required|exists:roles,id',
-                'status' => 'required|in:active,inactive',
+                'status' => 'required|in:' . implode(',', $allowedStatuses),
             ];
 
             if ($request->filled('pin')) {
@@ -337,6 +357,15 @@ class UserController extends Controller
                 'status' => $request->status,
                 'is_active' => $request->status === 'active' ? 'yes' : 'no',
             ];
+
+            if ($request->status === 'active') {
+                $userData['status_reason'] = null;
+            }
+
+            if ($user->status === 'suspended' && $request->status === 'active' && !$printService->isAdmin(auth()->user())) {
+                DB::rollBack();
+                abort(403, 'Only administrators can reactivate suspended accounts.');
+            }
 
             $user->update($userData);
 
@@ -545,13 +574,42 @@ class UserController extends Controller
             abort(403, 'Unauthorized access.');
         }
 
+        if ($user->status === 'suspended') {
+            abort(403, 'Suspended accounts can only be reactivated by an administrator.');
+        }
+
         $newStatus = $user->status === 'active' ? 'inactive' : 'active';
         $user->update([
             'status' => $newStatus,
-            'is_active' => $newStatus === 'active' ? 'yes' : 'no'
+            'is_active' => $newStatus === 'active' ? 'yes' : 'no',
+            'status_reason' => null,
         ]);
 
         return redirect()->route('users.index')->with('success', "User status changed to {$newStatus}!");
+    }
+
+    public function activateSuspended(User $user)
+    {
+        if ($user->company_id && current_company_id() && $user->company_id !== current_company_id()) {
+            abort(403, 'Unauthorized access.');
+        }
+
+        $printService = app(PosReceiptPrintService::class);
+        if (!$printService->isAdmin(auth()->user()) || !auth()->user()->can('edit user')) {
+            abort(403, 'Only administrators can reactivate suspended accounts.');
+        }
+
+        if ($user->status !== 'suspended') {
+            return redirect()->route('users.index')->with('error', 'This user is not suspended.');
+        }
+
+        $user->update([
+            'status' => 'active',
+            'is_active' => 'yes',
+            'status_reason' => null,
+        ]);
+
+        return redirect()->route('users.index')->with('success', 'User account reactivated successfully.');
     }
 
     public function assignRoles(Request $request, User $user)

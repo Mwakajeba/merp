@@ -61,6 +61,7 @@ class SalesInvoice extends Model
         'late_payment_fees_type',
         'late_payment_fees_rate',
         'notes',
+        'pos_receipt_print_count',
         'terms_conditions',
         'attachment',
         'branch_id',
@@ -91,6 +92,7 @@ class SalesInvoice extends Model
         'late_payment_fees_enabled' => 'boolean',
         'late_payment_fees_type' => 'string',
         'late_payment_fees_rate' => 'decimal:2',
+        'pos_receipt_print_count' => 'integer',
     ];
 
 

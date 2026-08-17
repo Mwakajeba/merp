@@ -16,6 +16,7 @@ use App\Models\GlTransaction;
 use App\Services\InventoryCostService;
 use App\Services\FxTransactionRateService;
 use App\Services\Sales\PosBillService;
+use App\Services\Sales\PosReceiptPrintService;
 use App\Mail\SalesInvoiceMail;
 use App\Traits\GetsCurrenciesFromFxRates;
 use App\Models\BankAccount;
@@ -899,7 +900,25 @@ class SalesInvoiceController extends Controller
             ->where('application_type', 'invoice')
             ->sum('amount_applied');
 
-        return view('sales.invoices.show', compact('invoice', 'unpaidInvoices', 'creditNotesApplied', 'totalUnpaidAmountInTZS', 'currentInvoiceBalanceInTZS', 'totalCustomerBalanceInTZS', 'functionalCurrency', 'receiptVoucherLines'));
+        $printService = app(PosReceiptPrintService::class);
+        $posReceiptPrintCount = $printService->getPrintCount($invoice);
+        $maxPosReceiptPrints = $printService->getMaxPrints();
+        $canPrintPosReceipt = $printService->hasRemainingPrints($invoice)
+            || $printService->userCanBypassPrintLimit(auth()->user());
+
+        return view('sales.invoices.show', compact(
+            'invoice',
+            'unpaidInvoices',
+            'creditNotesApplied',
+            'totalUnpaidAmountInTZS',
+            'currentInvoiceBalanceInTZS',
+            'totalCustomerBalanceInTZS',
+            'functionalCurrency',
+            'receiptVoucherLines',
+            'posReceiptPrintCount',
+            'maxPosReceiptPrints',
+            'canPrintPosReceipt'
+        ));
     }
 
     /**
@@ -3169,7 +3188,15 @@ class SalesInvoiceController extends Controller
         $printSize = strtolower($request->query('size', 'a4'));
 
         if ($printSize === 'pos') {
-            // Browser-based thermal print (prints on user's PC, not the server).
+            if (!$this->userCanPrintPosReceipt($invoice)) {
+                abort(403, 'Unauthorized action.');
+            }
+
+            $blockedView = $this->handlePosReceiptPrintAuthorization($invoice);
+            if ($blockedView) {
+                return $blockedView;
+            }
+
             return view('sales.invoices.pos-receipt', compact('invoice'));
         }
 
@@ -3201,7 +3228,34 @@ class SalesInvoiceController extends Controller
             abort(403, 'Unauthorized action.');
         }
 
+        $blockedView = $this->handlePosReceiptPrintAuthorization($invoice);
+        if ($blockedView) {
+            return $blockedView;
+        }
+
         return view('sales.invoices.pos-receipt', compact('invoice'));
+    }
+
+    private function handlePosReceiptPrintAuthorization(SalesInvoice $invoice)
+    {
+        $printService = app(PosReceiptPrintService::class);
+        $user = auth()->user();
+        $authorization = $printService->authorizePrint($user, $invoice);
+
+        if (!$authorization['allowed']) {
+            Auth::logout();
+            request()->session()->invalidate();
+            request()->session()->regenerateToken();
+
+            return view('sales.pos.print-blocked', [
+                'message' => $authorization['message'],
+            ]);
+        }
+
+        $printService->recordPrint($invoice);
+        $invoice->refresh();
+
+        return null;
     }
 
     private function userCanPrintPosReceipt(SalesInvoice $invoice): bool

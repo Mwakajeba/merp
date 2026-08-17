@@ -71,7 +71,11 @@
                             <ul class="dropdown-menu">
                                 <li><a class="dropdown-item" href="{{ route('sales.invoices.print', $invoice->encoded_id) }}?size=a4" target="_blank"><i class="bx bx-file me-2"></i>A4</a></li>
                                 <li><a class="dropdown-item" href="{{ route('sales.invoices.print', $invoice->encoded_id) }}?size=a5" target="_blank"><i class="bx bx-file me-2"></i>A5</a></li>
+                                @if($canPrintPosReceipt ?? true)
                                 <li><a class="dropdown-item" href="{{ route('sales.invoices.print', $invoice->encoded_id) }}?size=pos" target="_blank" title="Prints on this computer's printer"><i class="bx bx-receipt me-2"></i>POS 80mm</a></li>
+                                @else
+                                <li><span class="dropdown-item text-muted disabled"><i class="bx bx-receipt me-2"></i>POS 80mm (limit reached)</span></li>
+                                @endif
                             </ul>
                         </div>
                         <div class="btn-group me-1">
@@ -105,6 +109,17 @@
                                     <tr>
                                         <td width="150"><strong>Invoice Number:</strong></td>
                                         <td>{{ $invoice->invoice_number }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>POS Receipt Prints:</strong></td>
+                                        <td>
+                                            <span class="badge {{ ($canPrintPosReceipt ?? true) ? 'bg-info' : 'bg-warning text-dark' }}">
+                                                {{ $posReceiptPrintCount ?? 0 }} / {{ $maxPosReceiptPrints ?? 1 }}
+                                            </span>
+                                            @if(!($canPrintPosReceipt ?? true))
+                                                <small class="text-danger ms-2">Print limit reached</small>
+                                            @endif
+                                        </td>
                                     </tr>
                                     @if($invoice->salesOrder)
                                     <tr>

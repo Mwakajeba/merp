@@ -44,6 +44,7 @@ class User extends Authenticatable
         'is_active',
         'user_id',
         'status',
+        'status_reason',
     ];
 
     public function branch()

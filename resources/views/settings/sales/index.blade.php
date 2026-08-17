@@ -76,6 +76,26 @@
                                         Opens the browser print dialog using the same POS receipt layout as sales invoices.
                                         Ensure a thermal printer is set up on the cashier PC.
                                     </small>
+
+                                    <div class="mt-4">
+                                        <label for="pos_receipt_max_prints" class="form-label">
+                                            <strong>Maximum POS receipt prints</strong>
+                                        </label>
+                                        <input type="number"
+                                               class="form-control @error('pos_receipt_max_prints') is-invalid @enderror"
+                                               id="pos_receipt_max_prints"
+                                               name="pos_receipt_max_prints"
+                                               min="1"
+                                               max="10"
+                                               value="{{ old('pos_receipt_max_prints', $currentSettings['pos_receipt_max_prints']) }}"
+                                               required>
+                                        <small class="text-muted d-block mt-2">
+                                            Each POS receipt can only be printed this many times. If a cashier tries to print again after the limit, their account is suspended until an administrator reactivates it.
+                                        </small>
+                                        @error('pos_receipt_max_prints')
+                                        <div class="text-danger small mt-2">{{ $message }}</div>
+                                        @enderror
+                                    </div>
                                 </div>
                             </div>
 
@@ -83,6 +103,11 @@
                                 <button type="submit" class="btn btn-primary">
                                     <i class="bx bx-save me-1"></i> Save Settings
                                 </button>
+                                @if(auth()->user()->can('view logs activity') || auth()->user()->can('view sales reports'))
+                                <a href="{{ route('sales.reports.pos-reprint-attempts') }}" class="btn btn-outline-danger">
+                                    <i class="bx bx-list-ul me-1"></i> Reprint Attempts Report
+                                </a>
+                                @endif
                                 <a href="{{ route('settings.index') }}" class="btn btn-secondary">
                                     <i class="bx bx-arrow-back me-1"></i> Back
                                 </a>

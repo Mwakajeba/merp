@@ -57,10 +57,29 @@
 
                         <div class="col-md-6 mb-3">
                             <label for="status" class="form-label">Status <span class="text-danger">*</span></label>
+                            @php
+                                $isSuspendedForReprint = $isEdit
+                                    && ($user->status ?? '') === 'suspended'
+                                    && ($user->status_reason ?? '') === \App\Services\Sales\PosReceiptPrintService::BLOCK_REASON;
+                                $canReactivateSuspended = auth()->user()->hasAnyRole(['admin', 'super-admin']);
+                            @endphp
                             <select name="status" id="status" class="form-control @error('status') is-invalid @enderror" required>
                                 <option value="active" {{ old('status', $user->status ?? 'active') == 'active' ? 'selected' : '' }}>Active</option>
                                 <option value="inactive" {{ old('status', $user->status ?? 'active') == 'inactive' ? 'selected' : '' }}>Inactive</option>
+                                @if($isEdit && ($user->status ?? '') === 'suspended')
+                                <option value="suspended" {{ old('status', $user->status) == 'suspended' ? 'selected' : '' }} disabled>Suspended</option>
+                                @endif
                             </select>
+                            @if($isSuspendedForReprint)
+                            <small class="text-danger d-block mt-2">
+                                This account was suspended for attempting to reprint a POS receipt.
+                                @if($canReactivateSuspended)
+                                    Change status to <strong>Active</strong> to reactivate.
+                                @else
+                                    Only an administrator can reactivate this account.
+                                @endif
+                            </small>
+                            @endif
                             @error('status') <div class="invalid-feedback">{{ $message }}</div> @enderror
                         </div>
                     </div>

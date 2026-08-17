@@ -912,7 +912,7 @@ function buildTodayBillCard(bill) {
         ? '<span class="badge bg-success">Paid</span>'
         : '<span class="badge bg-warning text-dark">Unpaid</span>';
 
-    const printBtn = bill.receipt_url
+    const printBtn = (bill.receipt_url && bill.can_print_receipt !== false)
         ? `<a href="${bill.receipt_url}" class="btn btn-sm btn-outline-secondary" target="_blank" title="Print bill">
                 <i class="bx bx-printer"></i>
            </a>`

@@ -49,6 +49,7 @@ class PosSale extends Model
         'withholding_tax_rate',
         'withholding_tax_type',
         'receipt_printed',
+        'receipt_print_count',
         'notes',
         'branch_id',
         'company_id',
@@ -73,6 +74,7 @@ class PosSale extends Model
         'withholding_tax_amount' => 'decimal:2',
         'withholding_tax_rate' => 'decimal:2',
         'receipt_printed' => 'boolean',
+        'receipt_print_count' => 'integer',
     ];
 
     protected static function boot()
@@ -911,10 +913,8 @@ class PosSale extends Model
      */
     public function processPayment()
     {
-        // For POS sales, payment is always immediate
-        // The payment amounts are already recorded in cash_amount, card_amount, mobile_money_amount
-        // Mark as completed
-        $this->receipt_printed = true;
+        // For POS sales, payment is always immediate.
+        // Receipt print tracking is handled when the receipt is actually printed.
         $this->save();
     }
 

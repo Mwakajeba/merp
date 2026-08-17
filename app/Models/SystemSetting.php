@@ -360,6 +360,7 @@ class SystemSetting extends Model
             'sales_enable_late_payment_fees' => ['value' => false, 'type' => 'boolean', 'group' => 'sales', 'label' => 'Enable Late Payment Fees', 'description' => 'Enable late payment fees feature for sales invoices'],
             'sales_require_approval' => ['value' => false, 'type' => 'boolean', 'group' => 'sales', 'label' => 'Require Invoice Approval', 'description' => 'Require approval before finalizing sales invoices'],
             'sales_allow_negative_stock' => ['value' => false, 'type' => 'boolean', 'group' => 'sales', 'label' => 'Allow Negative Stock', 'description' => 'Allow sales when stock is insufficient'],
+            'pos_receipt_max_prints' => ['value' => 1, 'type' => 'integer', 'group' => 'sales', 'label' => 'POS Receipt Max Prints', 'description' => 'Maximum number of times a POS receipt may be printed. Exceeding this limit blocks the user account until an administrator reactivates it.'],
 
         ];
 

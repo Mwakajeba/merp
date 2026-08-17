@@ -324,6 +324,7 @@ Route::resource('users', UserController::class)->middleware(['auth', 'company.sc
 
 // Additional user routes that require user parameter
 Route::patch('/users/{user}/status', [UserController::class, 'changeStatus'])->name('users.status')->middleware(['auth', 'company.scope', 'require.branch']);
+Route::post('/users/{user}/activate-suspended', [UserController::class, 'activateSuspended'])->name('users.activate-suspended')->middleware(['auth', 'company.scope', 'require.branch']);
 Route::post('/users/{user}/roles', [UserController::class, 'assignRoles'])->name('users.roles')->middleware(['auth', 'company.scope', 'require.branch']);
 Route::post('/users/{user}/reset-pin', [UserController::class, 'resetPin'])->name('users.reset-pin')->middleware(['auth', 'company.scope', 'require.branch']);
 
@@ -1315,6 +1316,8 @@ Route::prefix('sales/reports')->name('sales.reports.')->middleware(['auth', 'req
     Route::get('/paid-invoice', [App\Http\Controllers\Sales\SalesReportController::class, 'paidInvoice'])->name('paid-invoice');
     Route::get('/credit-note', [App\Http\Controllers\Sales\SalesReportController::class, 'creditNote'])->name('credit-note');
     Route::get('/tax-invoice', [App\Http\Controllers\Sales\SalesReportController::class, 'taxInvoice'])->name('tax-invoice');
+    Route::get('/pos-reprint-attempts', [App\Http\Controllers\Sales\PosReprintReportController::class, 'index'])->name('pos-reprint-attempts');
+    Route::get('/pos-reprint-attempts/data', [App\Http\Controllers\Sales\PosReprintReportController::class, 'getData'])->name('pos-reprint-attempts.data');
 
     // Export routes
     Route::get('/sales-summary/export/pdf', [App\Http\Controllers\Sales\SalesReportController::class, 'exportSalesSummaryPdf'])->name('sales-summary.export.pdf');

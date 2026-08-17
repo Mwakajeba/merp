@@ -331,6 +331,24 @@
                             </div>
                             @endcan
 
+                            <!-- POS Reprint Attempts Report -->
+                            @if(auth()->user()->can('view logs activity') || auth()->user()->can('view sales reports'))
+                            <div class="col-md-6 col-lg-4 mb-4">
+                                <div class="card border-danger position-relative">
+                                    <div class="card-body text-center">
+                                        <div class="mb-3">
+                                            <i class="bx bx-printer fs-1 text-danger"></i>
+                                        </div>
+                                        <h5 class="card-title">POS Reprint Attempts</h5>
+                                        <p class="card-text">Users who tried to reprint POS receipts after the allowed limit</p>
+                                        <a href="{{ route('sales.reports.pos-reprint-attempts') }}" class="btn btn-danger">
+                                            <i class="bx bx-list-ul me-1"></i> View Report
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                            @endif
+
                         </div>
                     </div>
                 </div>

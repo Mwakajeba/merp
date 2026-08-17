@@ -27,9 +27,14 @@
                         <a href="{{ route('sales.pos.edit', $posSale->encoded_id) }}" class="btn btn-warning">
                             <i class="bx bx-edit me-1"></i>Edit Sale
                         </a>
+                        @if($canPrintReceipt ?? true)
                         <a href="{{ route('sales.pos.receipt', $posSale->encoded_id) }}" class="btn btn-primary" target="_blank">
                             <i class="bx bx-printer me-1"></i>Print Receipt
                         </a>
+                        @endif
+                        @if(isset($receiptPrintCount))
+                        <span class="align-self-center badge bg-light text-dark">Printed {{ $receiptPrintCount }}/{{ $maxReceiptPrints ?? 1 }}</span>
+                        @endif
                         <a href="{{ route('sales.pos.list') }}" class="btn btn-secondary">
                             <i class="bx bx-arrow-back me-1"></i>Back to List
                         </a>

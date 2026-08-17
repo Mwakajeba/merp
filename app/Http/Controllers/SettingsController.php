@@ -771,6 +771,7 @@ class SettingsController extends Controller
         $currentSettings = [
             'pos_bill_mode_enabled' => (string) $get('pos_sale_mode', 'direct') === 'bill',
             'pos_auto_print_receipt' => (bool) $get('pos_auto_print_receipt', true),
+            'pos_receipt_max_prints' => (int) $get('pos_receipt_max_prints', 1),
         ];
 
         return view('settings.sales.index', compact('currentSettings'));
@@ -785,6 +786,7 @@ class SettingsController extends Controller
         $request->validate([
             'pos_bill_mode_enabled' => 'nullable|boolean',
             'pos_auto_print_receipt' => 'nullable|boolean',
+            'pos_receipt_max_prints' => 'required|integer|min:1|max:10',
         ]);
 
         $set = function (string $key, $value, string $type, string $label) {
@@ -794,6 +796,7 @@ class SettingsController extends Controller
         $posSaleMode = $request->boolean('pos_bill_mode_enabled') ? 'bill' : 'direct';
         $set('pos_sale_mode', $posSaleMode, 'string', 'POS Sale Mode');
         $set('pos_auto_print_receipt', $request->boolean('pos_auto_print_receipt'), 'boolean', 'Auto Print POS Receipt');
+        $set('pos_receipt_max_prints', (int) $request->input('pos_receipt_max_prints', 1), 'integer', 'POS Receipt Max Prints');
 
         return redirect()->route('settings.sales')->with('success', 'Sales settings updated successfully.');
     }
