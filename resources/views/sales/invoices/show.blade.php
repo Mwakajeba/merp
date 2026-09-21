@@ -72,9 +72,12 @@
                                 <li><a class="dropdown-item" href="{{ route('sales.invoices.print', $invoice->encoded_id) }}?size=a4" target="_blank"><i class="bx bx-file me-2"></i>A4</a></li>
                                 <li><a class="dropdown-item" href="{{ route('sales.invoices.print', $invoice->encoded_id) }}?size=a5" target="_blank"><i class="bx bx-file me-2"></i>A5</a></li>
                                 @if($canPrintPosReceipt ?? true)
-                                <li><a class="dropdown-item" href="{{ route('sales.invoices.print', $invoice->encoded_id) }}?size=pos" target="_blank" title="Prints on this computer's printer"><i class="bx bx-receipt me-2"></i>POS 80mm</a></li>
+                                <li><a class="dropdown-item" href="{{ route('sales.invoices.print', $invoice->encoded_id) }}?size=pos" target="_blank" title="Prints on this computer's printer"><i class="bx bx-receipt me-2"></i>POS 80mm (Full Bill)</a></li>
                                 @else
                                 <li><span class="dropdown-item text-muted disabled"><i class="bx bx-receipt me-2"></i>POS 80mm (limit reached)</span></li>
+                                @endif
+                                @if(($invoice->reference_no ?? '') === \App\Services\Sales\PosBillService::REFERENCE_NO)
+                                <li><a class="dropdown-item" href="{{ route('sales.invoices.pos-receipt', $invoice->encoded_id) }}?type=order" target="_blank"><i class="bx bx-food-menu me-2"></i>Latest Order Ticket</a></li>
                                 @endif
                             </ul>
                         </div>
@@ -155,6 +158,12 @@
                                         <td><strong>Invoice Date:</strong></td>
                                         <td>{{ $invoice->invoice_date ? $invoice->invoice_date->format('d M Y') : 'N/A' }}</td>
                                     </tr>
+                                    @if(!empty($invoice->table_number))
+                                    <tr>
+                                        <td><strong>Table Number:</strong></td>
+                                        <td><span class="badge bg-dark">{{ $invoice->table_number }}</span></td>
+                                    </tr>
+                                    @endif
                                     <tr>
                                         <td><strong>Due Date:</strong></td>
                                         <td>

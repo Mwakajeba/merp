@@ -346,11 +346,21 @@
                                 </button>
                             </div>
                             <div class="mt-2 {{ ($posSaleMode ?? 'direct') === 'bill' ? '' : 'd-none' }}" id="billCustomerNameWrap">
-                                <label for="billCustomerName" class="form-label small mb-1">Table / Customer Name</label>
+                                <label for="billTableNumber" class="form-label small mb-1">Table Number <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control form-control-sm mb-2" id="billTableNumber"
+                                    placeholder="e.g. 7, T12, Patio-3" autocomplete="off">
+                                <label for="billCustomerName" class="form-label small mb-1">Guest / Customer Name</label>
                                 <input type="text" class="form-control form-control-sm" id="billCustomerName"
                                     value="{{ ($posSaleMode ?? 'direct') === 'bill' ? ($defaultBillCustomerName ?? auth()->user()->name) : '' }}"
                                     placeholder="Defaults to logged-in user: {{ auth()->user()->name }}">
-                                <small class="text-muted">Leave as your name or change to table number / guest name.</small>
+                                <small class="text-muted">Table number appears on the bill. Use open bill below to add more drinks/food to the same tab.</small>
+                            </div>
+                            <div class="mt-2 {{ ($posSaleMode ?? 'direct') === 'bill' ? '' : 'd-none' }}" id="openBillSelectWrap">
+                                <label for="existingBillId" class="form-label small mb-1">Open Bill (running tab)</label>
+                                <select class="form-select form-select-sm" id="existingBillId" onchange="onExistingBillChange()">
+                                    <option value="">— New Bill —</option>
+                                </select>
+                                <small class="text-muted">Select an unpaid bill to add this cart as the next round.</small>
                             </div>
                             <div class="mt-2">
                                 <div class="alert alert-info py-2" id="selectedCustomerDisplay">
@@ -441,8 +451,8 @@
                         </div>
                         @if(($posSaleMode ?? 'direct') === 'bill')
                         <div class="d-grid gap-2 mt-2" id="billActionSection">
-                            <button type="button" class="btn btn-success btn-lg" onclick="processSale()">
-                                <i class="bx bx-receipt"></i> Create Bill
+                            <button type="button" class="btn btn-success btn-lg" id="billActionBtn" onclick="processSale()">
+                                <i class="bx bx-receipt"></i> <span id="billActionBtnLabel">Create Bill</span>
                             </button>
                         </div>
                         @endif
@@ -574,6 +584,78 @@ function getBillCustomerName() {
     const input = document.getElementById('billCustomerName');
     const value = (input?.value || '').trim();
     return value || defaultBillCustomerName;
+}
+
+function getBillTableNumber() {
+    return (document.getElementById('billTableNumber')?.value || '').trim();
+}
+
+function updateBillActionButton() {
+    const select = document.getElementById('existingBillId');
+    const label = document.getElementById('billActionBtnLabel');
+    if (!label) return;
+    const hasExisting = select && select.value;
+    label.textContent = hasExisting ? 'Add to Bill' : 'Create Bill';
+}
+
+function onExistingBillChange() {
+    const select = document.getElementById('existingBillId');
+    if (!select || !select.value) {
+        updateBillActionButton();
+        return;
+    }
+    const option = select.options[select.selectedIndex];
+    const tableNo = option?.dataset?.table || '';
+    const customerName = option?.dataset?.customer || '';
+    const customerId = option?.dataset?.customerId || '0';
+    const tableInput = document.getElementById('billTableNumber');
+    const nameInput = document.getElementById('billCustomerName');
+    if (tableInput && tableNo) tableInput.value = tableNo;
+    if (nameInput && customerName) nameInput.value = customerName;
+    if (customerId && customerId !== '0') {
+        selectCustomer(parseInt(customerId, 10), customerName);
+    } else {
+        document.getElementById('selectedCustomerId').value = '0';
+        document.getElementById('selectedCustomerName').value = customerName || defaultBillCustomerName;
+        document.getElementById('selectedCustomerText').textContent = customerName || defaultBillCustomerName;
+    }
+    updateBillActionButton();
+}
+
+function selectOpenBillForAdd(encodedId) {
+    const select = document.getElementById('existingBillId');
+    if (!select) return;
+    select.value = encodedId;
+    onExistingBillChange();
+    switchProductsPanel('products');
+    Swal.fire({
+        icon: 'info',
+        title: 'Bill selected',
+        text: 'Add items to the cart, then tap Add to Bill.',
+        timer: 1800,
+        showConfirmButton: false,
+    });
+}
+
+function populateOpenBillSelect(bills) {
+    const select = document.getElementById('existingBillId');
+    if (!select) return;
+    const current = select.value;
+    select.innerHTML = '<option value="">— New Bill —</option>';
+    (bills || []).filter(b => !b.is_paid).forEach(bill => {
+        const opt = document.createElement('option');
+        opt.value = bill.encoded_id;
+        const tableLabel = bill.table_number ? ('Table ' + bill.table_number + ' · ') : '';
+        opt.textContent = tableLabel + bill.invoice_number + ' · ' + (bill.customer_name || '');
+        opt.dataset.table = bill.table_number || '';
+        opt.dataset.customer = bill.customer_name || '';
+        opt.dataset.customerId = '0';
+        select.appendChild(opt);
+    });
+    if (current && [...select.options].some(o => o.value === current)) {
+        select.value = current;
+    }
+    updateBillActionButton();
 }
 
 // Initialize
@@ -913,9 +995,19 @@ function buildTodayBillCard(bill) {
         : '<span class="badge bg-warning text-dark">Unpaid</span>';
 
     const printBtn = (bill.receipt_url && bill.can_print_receipt !== false)
-        ? `<a href="${bill.receipt_url}" class="btn btn-sm btn-outline-secondary" target="_blank" title="Print bill">
+        ? `<a href="${bill.receipt_url}" class="btn btn-sm btn-outline-secondary" target="_blank" title="Print full bill">
                 <i class="bx bx-printer"></i>
            </a>`
+        : '';
+
+    const addBtn = bill.can_add_items
+        ? `<button type="button" class="btn btn-sm btn-primary" onclick="selectOpenBillForAdd('${escapeHtml(bill.encoded_id)}')" title="Add more items to this bill">
+                <i class="bx bx-plus"></i> Add
+           </button>`
+        : '';
+
+    const tableBadge = bill.table_number
+        ? `<span class="badge bg-dark me-1">Table ${escapeHtml(bill.table_number)}</span>`
         : '';
 
     return `<div class="col-12 col-md-6">
@@ -926,7 +1018,7 @@ function buildTodayBillCard(bill) {
                         <div class="fw-bold text-primary">${escapeHtml(bill.invoice_number)}</div>
                         <div class="small text-muted">${escapeHtml(bill.invoice_time)} · ${escapeHtml(bill.invoice_date)}</div>
                     </div>
-                    ${statusBadge}
+                    <div>${tableBadge}${statusBadge}</div>
                 </div>
                 <div class="mb-2">
                     <i class="bx bx-user me-1 text-muted"></i>
@@ -945,7 +1037,7 @@ function buildTodayBillCard(bill) {
                         <small class="text-muted d-block">Outstanding</small>
                         <span class="fw-bold ${bill.is_paid ? 'text-success' : 'text-danger'}">${formatMoney(bill.balance_due, bill.currency)}</span>
                     </div>
-                    <div>${printBtn}</div>
+                    <div class="d-flex gap-1">${addBtn}${printBtn}</div>
                 </div>
             </div>
         </div>
@@ -1009,6 +1101,7 @@ async function loadTodayBills(force = false) {
 
         const data = await response.json();
         const bills = data.bills || [];
+        populateOpenBillSelect(bills);
 
         if (countEl) {
             countEl.textContent = String(data.count ?? bills.length);
@@ -2195,6 +2288,18 @@ function processSale() {
     const customerId = parseInt(document.getElementById('selectedCustomerId').value, 10);
     const saleDate = document.getElementById('saleDate').value;
     const isBillMode = posSaleMode === 'bill';
+    const existingBillId = isBillMode ? (document.getElementById('existingBillId')?.value || '') : '';
+
+    if (isBillMode && !existingBillId && !getBillTableNumber()) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Table Number Required',
+            text: 'Enter the table number before creating a bill.',
+            confirmButtonColor: '#3085d6'
+        });
+        document.getElementById('billTableNumber')?.focus();
+        return;
+    }
 
     if (!isBillMode) {
         const bankAccountId = document.getElementById('bankAccountId').value;
@@ -2231,6 +2336,8 @@ function processSale() {
                 ? getBillCustomerName()
                 : document.getElementById('selectedCustomerName').value)
             : document.getElementById('selectedCustomerName').value,
+        table_number: isBillMode ? getBillTableNumber() : null,
+        existing_bill_id: existingBillId || null,
         payment_method: 'bank',
         bank_account_id: isBillMode ? null : document.getElementById('bankAccountId').value,
         cash_amount: 0,
@@ -2256,7 +2363,9 @@ function processSale() {
     
     // Show loading
     Swal.fire({
-        title: isBillMode ? 'Creating Bill...' : 'Processing Sale...',
+        title: isBillMode
+            ? (existingBillId ? 'Adding to Bill...' : 'Creating Bill...')
+            : 'Processing Sale...',
         text: isBillMode ? 'Please wait while we create the bill' : 'Please wait while we process your sale',
         allowOutsideClick: false,
         didOpen: () => {
@@ -2286,7 +2395,11 @@ function processSale() {
     .then(data => {
         if (data.success) {
             const isBill = data.mode === 'bill';
-            const refLabel = isBill ? ('Bill #' + (data.invoice_number || '')) : ('POS Sale #' + data.pos_number);
+            const added = data.action === 'added';
+            const tablePart = data.table_number ? (' · Table ' + data.table_number) : '';
+            const refLabel = isBill
+                ? ((added ? 'Added to Bill #' : 'Bill #') + (data.invoice_number || '') + tablePart)
+                : ('POS Sale #' + data.pos_number);
 
             if (data.receipt_url && posAutoPrintReceipt) {
                 window.open(data.receipt_url, '_blank', 'width=400,height=600');
@@ -2294,7 +2407,7 @@ function processSale() {
 
             Swal.fire({
                 icon: 'success',
-                title: isBill ? 'Bill Created!' : 'Sale Completed!',
+                title: isBill ? (added ? 'Items Added!' : 'Bill Created!') : 'Sale Completed!',
                 text: refLabel + ' has been processed successfully',
                 confirmButtonColor: '#28a745',
                 timer: 2000,
@@ -2307,6 +2420,11 @@ function processSale() {
                 if (isBillMode) {
                     const billNameInput = document.getElementById('billCustomerName');
                     if (billNameInput) billNameInput.value = defaultBillCustomerName;
+                    const tableInput = document.getElementById('billTableNumber');
+                    if (tableInput) tableInput.value = '';
+                    const existingSelect = document.getElementById('existingBillId');
+                    if (existingSelect) existingSelect.value = '';
+                    updateBillActionButton();
                     selectCustomer(0, defaultBillCustomerName);
                     todayBillsLoaded = false;
                     loadTodayBills(true);

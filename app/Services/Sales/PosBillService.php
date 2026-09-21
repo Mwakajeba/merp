@@ -64,6 +64,7 @@ class PosBillService
             'payment_terms' => 'immediate',
             'payment_days' => 0,
             'reference_no' => self::REFERENCE_NO,
+            'table_number' => $this->normalizeTableNumber($data['table_number'] ?? null),
             'currency' => $invoiceCurrency,
             'exchange_rate' => $exchangeRate,
             'withholding_tax_rate' => 0,
@@ -77,10 +78,110 @@ class PosBillService
             'created_by' => $user->id,
         ]);
 
+        $this->addLineItemsToInvoice($invoice, $data['items'] ?? [], 1, $saleDate, $branchId, $locationId);
+
+        $invoice->refresh();
+        $invoice->load('items');
+
+        $discountType = $data['discount_type'] ?? 'none';
+        $discountRate = (float) ($data['discount_rate'] ?? 0);
+        $lineSubtotal = (float) $invoice->items()->sum('line_total') - (float) $invoice->items()->sum('vat_amount');
+
+        if ($discountType === 'percentage' && $discountRate > 0) {
+            $invoice->discount_amount = $lineSubtotal * ($discountRate / 100);
+        } elseif ($discountType === 'fixed' && $discountRate > 0) {
+            $invoice->discount_amount = $discountRate;
+        }
+
+        $invoice->updateTotals();
+        $invoice->createDoubleEntryTransactions();
+
+        return $invoice->fresh(['customer', 'items', 'branch', 'company']);
+    }
+
+    /**
+     * Append items to an existing unpaid POS bill (running tab / extra round).
+     *
+     * @return array{invoice: SalesInvoice, round: int, added_item_ids: array<int>}
+     */
+    public function addItemsToBill(SalesInvoice $invoice, array $items, ?string $tableNumber = null): array
+    {
+        $user = Auth::user();
+        $branchId = session('branch_id') ?? ($user->branch_id ?? null);
+        $locationId = session('location_id');
+
+        if (!$branchId || !$locationId) {
+            throw new \RuntimeException('Branch and location must be selected before adding to a bill.');
+        }
+
+        if ($invoice->reference_no !== self::REFERENCE_NO) {
+            throw new \RuntimeException('Only POS bills can receive additional items.');
+        }
+
+        if (!self::userCanAccessBill($invoice, $user)) {
+            throw new \RuntimeException('You do not have access to this bill.');
+        }
+
+        if ((float) $invoice->paid_amount > 0
+            || (float) $invoice->balance_due <= 0
+            || in_array($invoice->status, ['paid', 'cancelled'], true)) {
+            throw new \RuntimeException('This bill is already paid or closed and cannot accept more items.');
+        }
+
+        if ($user->company_id && (int) $invoice->company_id !== (int) $user->company_id) {
+            throw new \RuntimeException('Invalid bill for this company.');
+        }
+
+        $normalizedTable = $this->normalizeTableNumber($tableNumber);
+        if ($normalizedTable !== null) {
+            $invoice->table_number = $normalizedTable;
+            $invoice->save();
+        }
+
+        $nextRound = ((int) $invoice->items()->max('pos_round')) + 1;
+        if ($nextRound < 1) {
+            $nextRound = 1;
+        }
+
+        $saleDate = $invoice->invoice_date?->format('Y-m-d') ?? now()->toDateString();
+        $addedIds = $this->addLineItemsToInvoice(
+            $invoice,
+            $items,
+            $nextRound,
+            $saleDate,
+            $branchId,
+            $locationId
+        );
+
+        $invoice->refresh();
+        $invoice->load('items');
+        $invoice->updateTotals();
+        $invoice->createDoubleEntryTransactions();
+
+        return [
+            'invoice' => $invoice->fresh(['customer', 'items', 'branch', 'company']),
+            'round' => $nextRound,
+            'added_item_ids' => $addedIds,
+        ];
+    }
+
+    /**
+     * @return array<int> Created invoice item IDs
+     */
+    protected function addLineItemsToInvoice(
+        SalesInvoice $invoice,
+        array $items,
+        int $round,
+        string $saleDate,
+        int $branchId,
+        int $locationId
+    ): array {
+        $user = Auth::user();
         $stockService = new InventoryStockService();
         $costService = new InventoryCostService();
+        $addedIds = [];
 
-        foreach ($data['items'] as $itemData) {
+        foreach ($items as $itemData) {
             $inventoryItem = InventoryItem::findOrFail($itemData['inventory_item_id']);
             $quantity = (float) $itemData['quantity'];
             $unitPrice = (float) $itemData['unit_price'];
@@ -125,7 +226,10 @@ class PosBillService
                 'discount_type' => null,
                 'discount_rate' => 0,
                 'discount_amount' => 0,
+                'pos_round' => $round,
             ]);
+
+            $addedIds[] = (int) $invoiceItem->id;
 
             if ($inventoryItem->track_stock && $inventoryItem->item_type === 'product') {
                 $balanceBefore = $stockService->getItemStockAtLocation($inventoryItem->id, $locationId);
@@ -153,10 +257,10 @@ class PosBillService
                     'total_cost' => $costInfo['total_cost'],
                     'balance_before' => $balanceBefore,
                     'balance_after' => $balanceAfter,
-                    'reference' => 'POS Bill: ' . $invoice->invoice_number,
+                    'reference' => 'POS Bill: ' . $invoice->invoice_number . ' (round ' . $round . ')',
                     'reference_type' => 'sales_invoice',
                     'reference_id' => $invoice->id,
-                    'notes' => 'Stock sold via POS bill',
+                    'notes' => 'Stock sold via POS bill round ' . $round,
                     'movement_date' => $saleDate,
                 ]);
 
@@ -189,23 +293,14 @@ class PosBillService
             }
         }
 
-        $invoice->refresh();
-        $invoice->load('items');
+        return $addedIds;
+    }
 
-        $discountType = $data['discount_type'] ?? 'none';
-        $discountRate = (float) ($data['discount_rate'] ?? 0);
-        $lineSubtotal = (float) $invoice->items()->sum('line_total') - (float) $invoice->items()->sum('vat_amount');
+    protected function normalizeTableNumber(?string $tableNumber): ?string
+    {
+        $tableNumber = trim((string) $tableNumber);
 
-        if ($discountType === 'percentage' && $discountRate > 0) {
-            $invoice->discount_amount = $lineSubtotal * ($discountRate / 100);
-        } elseif ($discountType === 'fixed' && $discountRate > 0) {
-            $invoice->discount_amount = $discountRate;
-        }
-
-        $invoice->updateTotals();
-        $invoice->createDoubleEntryTransactions();
-
-        return $invoice->fresh(['customer', 'items', 'branch', 'company']);
+        return $tableNumber !== '' ? mb_substr($tableNumber, 0, 50) : null;
     }
 
     public function resolveCustomer(

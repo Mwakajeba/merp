@@ -42,6 +42,7 @@ class SalesInvoice extends Model
         'payment_terms',
         'payment_days',
         'reference_no',
+        'table_number',
         'subtotal',
         'vat_amount',
         'discount_amount',

@@ -248,9 +248,12 @@ class PosSaleController extends Controller
                 'currency' => $currency,
                 'is_paid' => $isPaid,
                 'status' => $isPaid ? 'paid' : 'unpaid',
+                'table_number' => $bill->table_number,
+                'can_add_items' => !$isPaid,
                 'can_print_receipt' => $canPrintReceipt,
                 'receipt_print_count' => $printService->getPrintCount($bill),
                 'receipt_url' => ($autoPrint && $canPrintReceipt) ? route('sales.invoices.pos-receipt', $bill->encoded_id) : null,
+                'order_ticket_url' => route('sales.invoices.pos-receipt', $bill->encoded_id) . '?type=order',
             ];
         })->values();
 
@@ -438,6 +441,8 @@ class PosSaleController extends Controller
             $request->validate([
             'customer_id' => 'required|integer',
             'customer_name' => 'nullable|string|max:255',
+            'table_number' => 'nullable|string|max:50',
+            'existing_bill_id' => 'nullable|string',
             'sale_date' => 'required|date',
             'currency' => 'nullable|string|max:3',
             'exchange_rate' => 'nullable|numeric|min:0.000001',
@@ -483,9 +488,48 @@ class PosSaleController extends Controller
         DB::beginTransaction();
 
         try {
-            $invoice = app(PosBillService::class)->createBillFromPos([
+            $billService = app(PosBillService::class);
+            $autoPrint = (bool) SystemSetting::getValue('pos_auto_print_receipt', true);
+            $existingBillEncodedId = trim((string) $request->input('existing_bill_id', ''));
+
+            if ($existingBillEncodedId !== '') {
+                $existingId = Hashids::decode($existingBillEncodedId)[0] ?? null;
+                if (!$existingId) {
+                    throw new \RuntimeException('Invalid existing bill selected.');
+                }
+
+                $existingBill = SalesInvoice::findOrFail($existingId);
+                $result = $billService->addItemsToBill(
+                    $existingBill,
+                    $request->items,
+                    $request->input('table_number')
+                );
+                $invoice = $result['invoice'];
+                $round = $result['round'];
+
+                DB::commit();
+
+                $orderTicketUrl = route('sales.invoices.pos-receipt', $invoice->encoded_id)
+                    . '?type=order&round=' . $round;
+
+                return response()->json([
+                    'success' => true,
+                    'mode' => 'bill',
+                    'action' => 'added',
+                    'message' => 'Items added to bill #' . $invoice->invoice_number . ' (round ' . $round . ')',
+                    'invoice_number' => $invoice->invoice_number,
+                    'table_number' => $invoice->table_number,
+                    'round' => $round,
+                    'encoded_id' => $invoice->encoded_id,
+                    'receipt_url' => $autoPrint ? $orderTicketUrl : null,
+                    'full_bill_url' => route('sales.invoices.pos-receipt', $invoice->encoded_id),
+                ]);
+            }
+
+            $invoice = $billService->createBillFromPos([
                 'customer_id' => (int) $request->customer_id,
                 'customer_name' => $request->customer_name,
+                'table_number' => $request->input('table_number'),
                 'sale_date' => $request->sale_date,
                 'currency' => $request->currency,
                 'exchange_rate' => $request->exchange_rate,
@@ -497,14 +541,19 @@ class PosSaleController extends Controller
 
             DB::commit();
 
-            $autoPrint = (bool) SystemSetting::getValue('pos_auto_print_receipt', true);
+            $orderTicketUrl = route('sales.invoices.pos-receipt', $invoice->encoded_id) . '?type=order&round=1';
 
             return response()->json([
                 'success' => true,
                 'mode' => 'bill',
+                'action' => 'created',
                 'message' => 'Bill created successfully!',
                 'invoice_number' => $invoice->invoice_number,
-                'receipt_url' => $autoPrint ? route('sales.invoices.pos-receipt', $invoice->encoded_id) : null,
+                'table_number' => $invoice->table_number,
+                'round' => 1,
+                'encoded_id' => $invoice->encoded_id,
+                'receipt_url' => $autoPrint ? $orderTicketUrl : null,
+                'full_bill_url' => route('sales.invoices.pos-receipt', $invoice->encoded_id),
             ]);
         } catch (\Exception $e) {
             DB::rollBack();
@@ -1539,7 +1588,8 @@ class PosSaleController extends Controller
                 : '';
 
             $row = [
-                'invoice_number' => '<span class="fw-bold text-primary">' . e($bill->invoice_number) . '</span>',
+                'invoice_number' => '<span class="fw-bold text-primary">' . e($bill->invoice_number) . '</span>'
+                    . ($bill->table_number ? ' <span class="badge bg-dark">T' . e($bill->table_number) . '</span>' : ''),
                 'customer_name' => e($customerName),
                 'invoice_date' => format_datetime($bill->invoice_date ?? $bill->created_at, 'd/m/Y H:i'),
                 'balance_due' => '<span class="fw-bold text-danger">' . number_format((float) $bill->balance_due, 2) . ' ' . $currency . '</span>',
@@ -1548,6 +1598,7 @@ class PosSaleController extends Controller
                     'data-encoded-id="' . e($encodedId) . '" ' .
                     'data-invoice-number="' . e($bill->invoice_number) . '" ' .
                     'data-customer-name="' . e($customerName) . '" ' .
+                    'data-table-number="' . e($bill->table_number ?? '') . '" ' .
                     'data-balance="' . (float) $bill->balance_due . '">' .
                     '<i class="bx bx-check"></i> Pay</button>' .
                     $printButton .

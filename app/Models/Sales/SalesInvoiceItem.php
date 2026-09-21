@@ -37,6 +37,7 @@ class SalesInvoiceItem extends Model
         'expiry_date',
         'expiry_consumption_details',
         'notes',
+        'pos_round',
     ];
 
     protected $casts = [
@@ -52,6 +53,7 @@ class SalesInvoiceItem extends Model
         'stock_available' => 'boolean',
         'expiry_date' => 'date',
         'expiry_consumption_details' => 'array',
+        'pos_round' => 'integer',
     ];
 
     protected $dates = ['deleted_at'];

@@ -3192,12 +3192,7 @@ class SalesInvoiceController extends Controller
                 abort(403, 'Unauthorized action.');
             }
 
-            $blockedView = $this->handlePosReceiptPrintAuthorization($invoice);
-            if ($blockedView) {
-                return $blockedView;
-            }
-
-            return view('sales.invoices.pos-receipt', compact('invoice'));
+            return $this->renderPosReceiptView($invoice, $request);
         }
 
         if (!in_array($printSize, ['a4', 'a5'])) {
@@ -3210,7 +3205,7 @@ class SalesInvoiceController extends Controller
     /**
      * Thermal POS receipt in the browser (prints on the user's PC, not the server).
      */
-    public function posReceipt(string $encodedId)
+    public function posReceipt(Request $request, string $encodedId)
     {
         $invoiceId = Hashids::decode($encodedId)[0] ?? null;
         if (!$invoiceId) {
@@ -3228,12 +3223,49 @@ class SalesInvoiceController extends Controller
             abort(403, 'Unauthorized action.');
         }
 
-        $blockedView = $this->handlePosReceiptPrintAuthorization($invoice);
-        if ($blockedView) {
-            return $blockedView;
+        return $this->renderPosReceiptView($invoice, $request);
+    }
+
+    private function renderPosReceiptView(SalesInvoice $invoice, Request $request)
+    {
+        $printType = strtolower((string) $request->query('type', 'full'));
+        $isOrderTicket = $printType === 'order';
+        $round = $request->filled('round') ? (int) $request->query('round') : null;
+
+        if ($isOrderTicket) {
+            $itemsQuery = $invoice->items();
+            if ($round && $round > 0) {
+                $itemsQuery->where('pos_round', $round);
+            } else {
+                $maxRound = (int) $invoice->items()->max('pos_round');
+                if ($maxRound > 0) {
+                    $itemsQuery->where('pos_round', $maxRound);
+                    $round = $maxRound;
+                }
+            }
+            $receiptItems = $itemsQuery->get();
+            $receiptTitle = 'ORDER TICKET';
+            $showFullTotals = false;
+        } else {
+            $blockedView = $this->handlePosReceiptPrintAuthorization($invoice);
+            if ($blockedView) {
+                return $blockedView;
+            }
+
+            $receiptItems = $invoice->items;
+            $receiptTitle = \App\Models\SystemSetting::getValue('sales_invoice_print_title', 'SALES INVOICE');
+            $showFullTotals = true;
+            $round = null;
         }
 
-        return view('sales.invoices.pos-receipt', compact('invoice'));
+        return view('sales.invoices.pos-receipt', [
+            'invoice' => $invoice,
+            'receiptItems' => $receiptItems,
+            'receiptTitle' => $receiptTitle,
+            'isOrderTicket' => $isOrderTicket,
+            'showFullTotals' => $showFullTotals,
+            'posRound' => $round,
+        ]);
     }
 
     private function handlePosReceiptPrintAuthorization(SalesInvoice $invoice)

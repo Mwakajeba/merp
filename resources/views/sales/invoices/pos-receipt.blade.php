@@ -139,11 +139,15 @@
 <body>
 @php
     $currency = strtoupper(trim((string) ($invoice->currency ?: 'TZS')));
+    $items = $receiptItems ?? $invoice->items;
+    $title = $receiptTitle ?? \App\Models\SystemSetting::getValue('sales_invoice_print_title', 'SALES INVOICE');
+    $isOrder = $isOrderTicket ?? false;
+    $showTotals = $showFullTotals ?? true;
 @endphp
     <div class="receipt">
         <div class="header">
             <div class="company-name">{{ $invoice->company->name ?? config('app.name') }}</div>
-            <div class="receipt-title">{{ \App\Models\SystemSetting::getValue('sales_invoice_print_title', 'SALES INVOICE') }}</div>
+            <div class="receipt-title">{{ $title }}</div>
             @if($invoice->branch)
                 <div>{{ $invoice->branch->name }}</div>
             @endif
@@ -154,14 +158,26 @@
                 <span class="label">Invoice:</span>
                 <span>{{ $invoice->invoice_number }}</span>
             </div>
+            @if(!empty($invoice->table_number))
+            <div>
+                <span class="label">Table:</span>
+                <span><strong>{{ $invoice->table_number }}</strong></span>
+            </div>
+            @endif
             <div>
                 <span class="label">Date:</span>
                 <span>{{ $invoice->invoice_date?->format('d/m/Y') ?? 'N/A' }}</span>
             </div>
             <div>
-                <span class="label">Food Server:</span>
+                <span class="label">{{ $isOrder ? 'Guest / Server:' : 'Food Server:' }}</span>
                 <span>{{ $invoice->customer->name ?? 'N/A' }}</span>
             </div>
+            @if($isOrder && !empty($posRound))
+            <div>
+                <span class="label">Round:</span>
+                <span>{{ $posRound }}</span>
+            </div>
+            @endif
             @if($invoice->reference_no)
             <div>
                 <span class="label">Ref:</span>
@@ -171,7 +187,7 @@
         </div>
 
         <div class="items">
-            @foreach($invoice->items as $item)
+            @forelse($items as $item)
             <div class="item">
                 <div class="item-name">{{ $item->item_name }}</div>
                 <div class="item-line">
@@ -179,9 +195,14 @@
                     <span>{{ number_format((float) $item->line_total, 2) }}</span>
                 </div>
             </div>
-            @endforeach
+            @empty
+            <div class="item">
+                <div class="item-name">No items</div>
+            </div>
+            @endforelse
         </div>
 
+        @if($showTotals)
         <div class="totals">
             <div class="row">
                 <span>Subtotal:</span>
@@ -204,9 +225,17 @@
                 <span>{{ number_format((float) $invoice->total_amount, 2) }} {{ $currency }}</span>
             </div>
         </div>
+        @else
+        <div class="totals">
+            <div class="row final">
+                <span>THIS ORDER:</span>
+                <span>{{ number_format((float) $items->sum('line_total'), 2) }} {{ $currency }}</span>
+            </div>
+        </div>
+        @endif
 
         <div class="footer">
-            <div>Thank you</div>
+            <div>{{ $isOrder ? 'Kitchen / Bar order' : 'Thank you' }}</div>
             <div>Printed: {{ now()->format('d/m/Y H:i') }}</div>
         </div>
     </div>
