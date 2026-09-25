@@ -847,6 +847,7 @@ class SalesInvoiceController extends Controller
             'company',
             'createdBy',
             'updatedBy',
+            'inventoryLocation',
             'glTransactions.chartAccount',
             'creditNotes',
             'payments.user',
@@ -3178,7 +3179,8 @@ class SalesInvoiceController extends Controller
             'items.inventoryItem',
             'branch',
             'company',
-            'createdBy'
+            'createdBy',
+            'inventoryLocation',
         ])->findOrFail($invoiceId);
 
         // Get bank accounts for mobile money details
@@ -3217,6 +3219,7 @@ class SalesInvoiceController extends Controller
             'items',
             'branch',
             'company',
+            'inventoryLocation',
         ])->findOrFail($invoiceId);
 
         if (!$this->userCanPrintPosReceipt($invoice)) {

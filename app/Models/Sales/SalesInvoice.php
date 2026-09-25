@@ -66,6 +66,7 @@ class SalesInvoice extends Model
         'terms_conditions',
         'attachment',
         'branch_id',
+        'inventory_location_id',
         'company_id',
         'created_by',
         'updated_by',
@@ -157,6 +158,11 @@ class SalesInvoice extends Model
     public function branch(): BelongsTo
     {
         return $this->belongsTo(Branch::class);
+    }
+
+    public function inventoryLocation(): BelongsTo
+    {
+        return $this->belongsTo(\App\Models\InventoryLocation::class, 'inventory_location_id');
     }
 
     public function company(): BelongsTo

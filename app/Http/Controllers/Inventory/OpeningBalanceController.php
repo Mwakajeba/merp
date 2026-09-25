@@ -612,11 +612,15 @@ class OpeningBalanceController extends Controller
         return redirect()->route('inventory.opening-balances.index')->with('success', $msg)->with('ob_import_errors', $errors);
     }
 
-    public function downloadTemplate()
+    public function downloadTemplate(Request $request)
     {
         $this->authorize('viewAny', Item::class);
 
-        $filename = 'opening_balance_template.csv';
+        $useSample = $request->boolean('sample', true);
+        $filename = $useSample
+            ? 'opening_balance_sample_beverages.csv'
+            : 'opening_balance_template.csv';
+
         $headers = [
             'Content-Type' => 'text/csv',
             'Content-Disposition' => 'attachment; filename="' . $filename . '"',
@@ -624,35 +628,43 @@ class OpeningBalanceController extends Controller
 
         $rows = [];
         // Header (item_name is optional - only for user reference)
-        $rows[] = ['item_name','item_code', 'quantity', 'unit_cost', 'has_expiry_date', 'expiry_date'];
+        $rows[] = ['item_name', 'item_code', 'quantity', 'unit_cost', 'has_expiry_date', 'expiry_date'];
 
-        // List only items without an opening balance at the current login location
-        $user = Auth::user();
-        $loginLocationId = session('location_id');
-        $itemsQuery = Item::where('company_id', $user->company_id);
-        if ($loginLocationId) {
-            $existingItemIds = OpeningBalance::where('company_id', $user->company_id)
-                ->where('inventory_location_id', $loginLocationId)
-                ->pluck('item_id');
-            $itemsQuery->whereNotIn('id', $existingItemIds);
-        }
-        $items = $itemsQuery->orderBy('code')->get(['name', 'code', 'cost_price', 'track_expiry']);
+        if ($useSample) {
+            // Pre-filled quantities & costs from notebook sample (import items first)
+            foreach (\App\Support\BeverageSampleCatalog::openingBalanceRows() as $row) {
+                $rows[] = $row;
+            }
+        } else {
+            // List only items without an opening balance at the current login location
+            $user = Auth::user();
+            $loginLocationId = session('location_id');
+            $sampleByCode = \App\Support\BeverageSampleCatalog::keyedByCode();
+            $itemsQuery = Item::where('company_id', $user->company_id);
+            if ($loginLocationId) {
+                $existingItemIds = OpeningBalance::where('company_id', $user->company_id)
+                    ->where('inventory_location_id', $loginLocationId)
+                    ->pluck('item_id');
+                $itemsQuery->whereNotIn('id', $existingItemIds);
+            }
+            $items = $itemsQuery->orderBy('code')->get(['name', 'code', 'cost_price', 'track_expiry']);
 
-        foreach ($items as $item) {
-            $rows[] = [
-                $item->name,
-                $item->code,
-                '', // quantity left blank for user to fill
-                (string) ($item->cost_price ?? '0'),
-                $item->track_expiry ? 'true' : 'false', // has_expiry_date
-                '', // expiry_date left blank for user to fill if needed
-            ];
+            foreach ($items as $item) {
+                $sample = $sampleByCode[$item->code] ?? null;
+                $rows[] = [
+                    $item->name,
+                    $item->code,
+                    $sample ? (string) $sample['quantity'] : '',
+                    (string) ($item->cost_price ?? ($sample['cost_price'] ?? '0')),
+                    $item->track_expiry ? 'true' : 'false',
+                    '',
+                ];
+            }
         }
 
         // Build CSV content
         $content = '';
         foreach ($rows as $r) {
-            // Escape commas if needed
             $escaped = array_map(function ($v) {
                 $v = (string) $v;
                 return str_contains($v, ',') ? '"' . str_replace('"', '""', $v) . '"' : $v;

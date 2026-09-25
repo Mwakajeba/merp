@@ -164,6 +164,12 @@
                 <span><strong>{{ $invoice->table_number }}</strong></span>
             </div>
             @endif
+            @if($invoice->inventoryLocation)
+            <div>
+                <span class="label">Location:</span>
+                <span><strong>{{ $invoice->inventoryLocation->name }}</strong></span>
+            </div>
+            @endif
             <div>
                 <span class="label">Date:</span>
                 <span>{{ $invoice->invoice_date?->format('d/m/Y') ?? 'N/A' }}</span>

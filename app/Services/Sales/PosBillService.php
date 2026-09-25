@@ -27,11 +27,11 @@ class PosBillService
     {
         $user = Auth::user();
         $branchId = session('branch_id') ?? ($user->branch_id ?? null);
-        $locationId = session('location_id');
         $companyId = $user->company_id;
+        $locationId = $this->resolvePosLocationId($user, $data['location_id'] ?? null);
 
-        if (!$branchId || !$locationId) {
-            throw new \RuntimeException('Branch and location must be selected before creating a bill.');
+        if (!$branchId) {
+            throw new \RuntimeException('Branch must be selected before creating a bill.');
         }
 
         $customer = $this->resolveCustomer(
@@ -74,6 +74,7 @@ class PosBillService
             'discount_amount' => 0,
             'notes' => $data['notes'] ?? 'Created from POS bill mode',
             'branch_id' => $branchId,
+            'inventory_location_id' => $locationId,
             'company_id' => $companyId,
             'created_by' => $user->id,
         ]);
@@ -96,7 +97,7 @@ class PosBillService
         $invoice->updateTotals();
         $invoice->createDoubleEntryTransactions();
 
-        return $invoice->fresh(['customer', 'items', 'branch', 'company']);
+        return $invoice->fresh(['customer', 'items', 'branch', 'company', 'inventoryLocation']);
     }
 
     /**
@@ -104,14 +105,13 @@ class PosBillService
      *
      * @return array{invoice: SalesInvoice, round: int, added_item_ids: array<int>}
      */
-    public function addItemsToBill(SalesInvoice $invoice, array $items, ?string $tableNumber = null): array
+    public function addItemsToBill(SalesInvoice $invoice, array $items, ?string $tableNumber = null, $locationId = null): array
     {
         $user = Auth::user();
         $branchId = session('branch_id') ?? ($user->branch_id ?? null);
-        $locationId = session('location_id');
 
-        if (!$branchId || !$locationId) {
-            throw new \RuntimeException('Branch and location must be selected before adding to a bill.');
+        if (!$branchId) {
+            throw new \RuntimeException('Branch must be selected before adding to a bill.');
         }
 
         if ($invoice->reference_no !== self::REFERENCE_NO) {
@@ -132,6 +132,15 @@ class PosBillService
             throw new \RuntimeException('Invalid bill for this company.');
         }
 
+        $resolvedLocationId = $invoice->inventory_location_id
+            ? (int) $invoice->inventory_location_id
+            : $this->resolvePosLocationId($user, $locationId);
+
+        if (!$invoice->inventory_location_id) {
+            $invoice->inventory_location_id = $resolvedLocationId;
+            $invoice->save();
+        }
+
         $normalizedTable = $this->normalizeTableNumber($tableNumber);
         if ($normalizedTable !== null) {
             $invoice->table_number = $normalizedTable;
@@ -150,7 +159,7 @@ class PosBillService
             $nextRound,
             $saleDate,
             $branchId,
-            $locationId
+            $resolvedLocationId
         );
 
         $invoice->refresh();
@@ -159,10 +168,40 @@ class PosBillService
         $invoice->createDoubleEntryTransactions();
 
         return [
-            'invoice' => $invoice->fresh(['customer', 'items', 'branch', 'company']),
+            'invoice' => $invoice->fresh(['customer', 'items', 'branch', 'company', 'inventoryLocation']),
             'round' => $nextRound,
             'added_item_ids' => $addedIds,
         ];
+    }
+
+    /**
+     * Resolve and validate POS inventory location for the logged-in user.
+     */
+    public function resolvePosLocationId(User $user, $locationId = null): int
+    {
+        $requestedId = (int) ($locationId ?: session('location_id') ?: 0);
+        $assignedIds = $user->locations()->pluck('inventory_locations.id')->map(fn ($id) => (int) $id)->all();
+
+        if ($assignedIds === []) {
+            throw new \RuntimeException('You have no inventory locations assigned. Ask an administrator to assign a location.');
+        }
+
+        if ($requestedId > 0 && in_array($requestedId, $assignedIds, true)) {
+            return $requestedId;
+        }
+
+        $default = $user->locations()->wherePivot('is_default', true)->first()
+            ?? $user->locations()->first();
+
+        if (!$default) {
+            throw new \RuntimeException('Please select a location before creating a bill.');
+        }
+
+        if ($requestedId > 0 && $requestedId !== (int) $default->id) {
+            throw new \RuntimeException('Selected location is not assigned to your account.');
+        }
+
+        return (int) $default->id;
     }
 
     /**

@@ -164,6 +164,12 @@
                                         <td><span class="badge bg-dark">{{ $invoice->table_number }}</span></td>
                                     </tr>
                                     @endif
+                                    @if($invoice->inventoryLocation)
+                                    <tr>
+                                        <td><strong>Location:</strong></td>
+                                        <td>{{ $invoice->inventoryLocation->name }}</td>
+                                    </tr>
+                                    @endif
                                     <tr>
                                         <td><strong>Due Date:</strong></td>
                                         <td>

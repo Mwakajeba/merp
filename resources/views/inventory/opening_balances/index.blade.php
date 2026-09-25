@@ -73,18 +73,23 @@
                                         </div>
                                     </div>
                                 </div>
-                                <div class="modal-footer d-flex justify-content-between align-items-center w-100">
-                                    <a href="{{ route('inventory.opening-balances.template') }}" class="btn btn-outline-secondary">
-                                        <i class="bx bx-download me-1"></i> Download Sample
-                                    </a>
+                                <div class="modal-footer d-flex justify-content-between align-items-center w-100 flex-wrap gap-2">
+                                    <div class="d-flex gap-2 flex-wrap">
+                                        <a href="{{ route('inventory.opening-balances.template') }}" class="btn btn-outline-secondary" title="108 beverages with qty & cost from your notebook">
+                                            <i class="bx bx-download me-1"></i> Download Prefilled Sample
+                                        </a>
+                                        <a href="{{ route('inventory.opening-balances.template', ['sample' => 0]) }}" class="btn btn-outline-secondary" title="Items already in system without opening balance">
+                                            <i class="bx bx-list-ul me-1"></i> From My Items
+                                        </a>
+                                    </div>
                                     <div>
-                                        <div class="modal-footer">
-                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                                            <button type="submit" class="btn btn-primary ob-import-submit">
-                                                <span class="ob-import-default"><i class="bx bx-upload me-1"></i> Import</span>
-                                                <span class="ob-import-processing d-none"><span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Processing...</span>
-                                            </button>
-                                        </div>
+                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                        <button type="submit" class="btn btn-primary ob-import-submit">
+                                            <span class="ob-import-default"><i class="bx bx-upload me-1"></i> Import</span>
+                                            <span class="ob-import-processing d-none"><span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Processing...</span>
+                                        </button>
+                                    </div>
+                                </div>
                             </form>
                         </div>
                     </div>

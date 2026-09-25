@@ -930,36 +930,15 @@ class ItemController extends Controller
             'track_expiry',
         ];
 
-        // Sample beverage products data (Prices in TZS); unit_price is column index 5
-        $baseSampleData = [
-            ['Coca Cola 500ml', 'CC500', 'Coca Cola soft drink 500ml bottle', 'bottles', '800', '1200', '50', '500', '100', 'Yes'],
-            ['Pepsi 500ml', 'PP500', 'Pepsi soft drink 500ml bottle', 'bottles', '750', '1150', '50', '500', '100', 'Yes'],
-            ['Sprite 500ml', 'SP500', 'Sprite lemon-lime drink 500ml bottle', 'bottles', '750', '1150', '40', '400', '80', 'Yes'],
-            ['Fanta Orange 500ml', 'FO500', 'Fanta orange flavored drink 500ml bottle', 'bottles', '750', '1150', '40', '400', '80', 'Yes'],
-            ['Mountain Dew 500ml', 'MD500', 'Mountain Dew citrus drink 500ml bottle', 'bottles', '850', '1250', '30', '300', '60', 'Yes'],
-            ['Red Bull Energy 250ml', 'RB250', 'Red Bull energy drink 250ml can', 'cans', '1500', '2500', '20', '200', '40', 'Yes'],
-            ['Monster Energy 500ml', 'ME500', 'Monster energy drink 500ml can', 'cans', '1800', '2800', '15', '150', '30', 'Yes'],
-            ['Aquafina Water 500ml', 'AQ500', 'Aquafina purified water 500ml bottle', 'bottles', '300', '600', '100', '1000', '200', 'No'],
-            ['Dasani Water 500ml', 'DS500', 'Dasani purified water 500ml bottle', 'bottles', '300', '600', '100', '1000', '200', 'No'],
-            ['7UP 500ml', 'SU500', '7UP lemon-lime drink 500ml bottle', 'bottles', '750', '1150', '40', '400', '80', 'Yes'],
-            ['Dr Pepper 500ml', 'DP500', 'Dr Pepper soft drink 500ml bottle', 'bottles', '800', '1200', '30', '300', '60', 'Yes'],
-            ['Gatorade Sports Drink 500ml', 'GT500', 'Gatorade sports drink 500ml bottle', 'bottles', '1000', '1800', '25', '250', '50', 'Yes'],
-            ['Powerade Sports Drink 500ml', 'PW500', 'Powerade sports drink 500ml bottle', 'bottles', '950', '1750', '25', '250', '50', 'Yes'],
-            ['Juice Orange 1L', 'JO1L', 'Fresh orange juice 1 liter carton', 'cartons', '2000', '3500', '20', '200', '40', 'Yes'],
-            ['Juice Apple 1L', 'JA1L', 'Fresh apple juice 1 liter carton', 'cartons', '2200', '3700', '20', '200', '40', 'Yes'],
-            ['Iced Tea Lemon 500ml', 'IT500', 'Lemon flavored iced tea 500ml bottle', 'bottles', '900', '1500', '35', '350', '70', 'Yes'],
-            ['Coffee Frappuccino 500ml', 'CF500', 'Coffee frappuccino drink 500ml bottle', 'bottles', '1200', '2000', '20', '200', '40', 'Yes'],
-            ['Green Tea 500ml', 'GT500B', 'Unsweetened green tea 500ml bottle', 'bottles', '1000', '1600', '25', '250', '50', 'Yes'],
-            ['Coconut Water 500ml', 'CW500', 'Natural coconut water 500ml bottle', 'bottles', '1500', '2500', '15', '150', '30', 'Yes'],
-            ['Energy Shot 60ml', 'ES60', 'High caffeine energy shot 60ml bottle', 'bottles', '800', '1500', '50', '500', '100', 'Yes'],
-        ];
+        // Sample beverage products (Prices in TZS); unit_price is column index 5
+        $baseSampleData = \App\Support\BeverageSampleCatalog::itemImportRows();
 
         $sampleData = [];
         $rowIndex = 0;
         foreach ($baseSampleData as $row) {
             if ($variant === 'wholesale') {
                 $unitPrice = is_numeric($row[5] ?? null) ? (float) $row[5] : 0;
-                // First rows: wholesale enabled with ~10% below retail; water rows: retail only
+                // First rows: wholesale enabled with ~10% below retail; later rows: retail only
                 if ($rowIndex < 12 && $unitPrice > 0) {
                     $wholesale = number_format(round($unitPrice * 0.9, 2), 2, '.', '');
                     $sampleData[] = array_merge($row, ['Yes', $wholesale]);

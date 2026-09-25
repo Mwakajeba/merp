@@ -346,14 +346,28 @@
                                 </button>
                             </div>
                             <div class="mt-2 {{ ($posSaleMode ?? 'direct') === 'bill' ? '' : 'd-none' }}" id="billCustomerNameWrap">
-                                <label for="billTableNumber" class="form-label small mb-1">Table Number <span class="text-danger">*</span></label>
+                                <label for="billTableNumber" class="form-label small mb-1">Table Number <span class="text-muted">(optional)</span></label>
                                 <input type="text" class="form-control form-control-sm mb-2" id="billTableNumber"
                                     placeholder="e.g. 7, T12, Patio-3" autocomplete="off">
+
+                                <label for="billLocationId" class="form-label small mb-1">Location <span class="text-danger">*</span></label>
+                                <select class="form-select form-select-sm mb-2" id="billLocationId" required onchange="onBillLocationChange()">
+                                    <option value="">— Select location —</option>
+                                    @foreach(($userLocations ?? []) as $loc)
+                                        <option value="{{ $loc->id }}" {{ (int)($selectedLocationId ?? 0) === (int)$loc->id ? 'selected' : '' }}>
+                                            {{ $loc->name }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                                @if(($userLocations ?? collect())->isEmpty())
+                                    <small class="text-danger d-block mb-2">No locations assigned to your account. Contact an administrator.</small>
+                                @endif
+
                                 <label for="billCustomerName" class="form-label small mb-1">Guest / Customer Name</label>
                                 <input type="text" class="form-control form-control-sm" id="billCustomerName"
                                     value="{{ ($posSaleMode ?? 'direct') === 'bill' ? ($defaultBillCustomerName ?? auth()->user()->name) : '' }}"
                                     placeholder="Defaults to logged-in user: {{ auth()->user()->name }}">
-                                <small class="text-muted">Table number appears on the bill. Use open bill below to add more drinks/food to the same tab.</small>
+                                <small class="text-muted">Location is required and prints on the bill. Table number is optional. Use open bill below to add more items to the same tab.</small>
                             </div>
                             <div class="mt-2 {{ ($posSaleMode ?? 'direct') === 'bill' ? '' : 'd-none' }}" id="openBillSelectWrap">
                                 <label for="existingBillId" class="form-label small mb-1">Open Bill (running tab)</label>
@@ -590,6 +604,21 @@ function getBillTableNumber() {
     return (document.getElementById('billTableNumber')?.value || '').trim();
 }
 
+function getBillLocationId() {
+    return (document.getElementById('billLocationId')?.value || '').trim();
+}
+
+function onBillLocationChange() {
+    // Reload product stock for the selected location
+    if (typeof loadPosProducts === 'function') {
+        if (typeof posProductsState !== 'undefined') {
+            posProductsState.page = 1;
+            posProductsState.hasMore = true;
+        }
+        loadPosProducts(true);
+    }
+}
+
 function updateBillActionButton() {
     const select = document.getElementById('existingBillId');
     const label = document.getElementById('billActionBtnLabel');
@@ -606,11 +635,17 @@ function onExistingBillChange() {
     }
     const option = select.options[select.selectedIndex];
     const tableNo = option?.dataset?.table || '';
+    const locationId = option?.dataset?.locationId || '';
     const customerName = option?.dataset?.customer || '';
     const customerId = option?.dataset?.customerId || '0';
     const tableInput = document.getElementById('billTableNumber');
+    const locationSelect = document.getElementById('billLocationId');
     const nameInput = document.getElementById('billCustomerName');
-    if (tableInput && tableNo) tableInput.value = tableNo;
+    if (tableInput) tableInput.value = tableNo;
+    if (locationSelect && locationId) {
+        locationSelect.value = locationId;
+        onBillLocationChange();
+    }
     if (nameInput && customerName) nameInput.value = customerName;
     if (customerId && customerId !== '0') {
         selectCustomer(parseInt(customerId, 10), customerName);
@@ -646,8 +681,10 @@ function populateOpenBillSelect(bills) {
         const opt = document.createElement('option');
         opt.value = bill.encoded_id;
         const tableLabel = bill.table_number ? ('Table ' + bill.table_number + ' · ') : '';
-        opt.textContent = tableLabel + bill.invoice_number + ' · ' + (bill.customer_name || '');
+        const locLabel = bill.location_name ? (bill.location_name + ' · ') : '';
+        opt.textContent = tableLabel + locLabel + bill.invoice_number + ' · ' + (bill.customer_name || '');
         opt.dataset.table = bill.table_number || '';
+        opt.dataset.locationId = bill.location_id || '';
         opt.dataset.customer = bill.customer_name || '';
         opt.dataset.customerId = '0';
         select.appendChild(opt);
@@ -872,6 +909,10 @@ async function loadPosProducts(reset = false) {
         search: posProductsState.search,
         category: posProductsState.category,
     });
+    const billLocationId = getBillLocationId();
+    if (billLocationId) {
+        params.set('location_id', billLocationId);
+    }
 
     try {
         const response = await fetch(`${posProductsConfig.url}?${params.toString()}`, {
@@ -956,6 +997,10 @@ document.getElementById('categoryFilter').addEventListener('change', function() 
 
 async function openPosProductByCode(code) {
     const params = new URLSearchParams({ code });
+    const billLocationId = getBillLocationId();
+    if (billLocationId) {
+        params.set('location_id', billLocationId);
+    }
     const response = await fetch(`${posProductsConfig.findByCodeUrl}?${params.toString()}`, {
         headers: {
             'Accept': 'application/json',
@@ -1009,6 +1054,9 @@ function buildTodayBillCard(bill) {
     const tableBadge = bill.table_number
         ? `<span class="badge bg-dark me-1">Table ${escapeHtml(bill.table_number)}</span>`
         : '';
+    const locationBadge = bill.location_name
+        ? `<span class="badge bg-secondary me-1">${escapeHtml(bill.location_name)}</span>`
+        : '';
 
     return `<div class="col-12 col-md-6">
         <div class="card today-bill-card h-100">
@@ -1018,7 +1066,7 @@ function buildTodayBillCard(bill) {
                         <div class="fw-bold text-primary">${escapeHtml(bill.invoice_number)}</div>
                         <div class="small text-muted">${escapeHtml(bill.invoice_time)} · ${escapeHtml(bill.invoice_date)}</div>
                     </div>
-                    <div>${tableBadge}${statusBadge}</div>
+                    <div>${tableBadge}${locationBadge}${statusBadge}</div>
                 </div>
                 <div class="mb-2">
                     <i class="bx bx-user me-1 text-muted"></i>
@@ -2290,14 +2338,14 @@ function processSale() {
     const isBillMode = posSaleMode === 'bill';
     const existingBillId = isBillMode ? (document.getElementById('existingBillId')?.value || '') : '';
 
-    if (isBillMode && !existingBillId && !getBillTableNumber()) {
+    if (isBillMode && !getBillLocationId()) {
         Swal.fire({
             icon: 'warning',
-            title: 'Table Number Required',
-            text: 'Enter the table number before creating a bill.',
+            title: 'Location Required',
+            text: 'Please select a location before creating or adding to a bill.',
             confirmButtonColor: '#3085d6'
         });
-        document.getElementById('billTableNumber')?.focus();
+        document.getElementById('billLocationId')?.focus();
         return;
     }
 
@@ -2337,6 +2385,7 @@ function processSale() {
                 : document.getElementById('selectedCustomerName').value)
             : document.getElementById('selectedCustomerName').value,
         table_number: isBillMode ? getBillTableNumber() : null,
+        location_id: isBillMode ? getBillLocationId() : null,
         existing_bill_id: existingBillId || null,
         payment_method: 'bank',
         bank_account_id: isBillMode ? null : document.getElementById('bankAccountId').value,

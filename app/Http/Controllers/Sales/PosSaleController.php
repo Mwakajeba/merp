@@ -88,6 +88,21 @@ class PosSaleController extends Controller
         $posSaleMode = SystemSetting::getValue('pos_sale_mode', 'direct');
         $posAutoPrintReceipt = (bool) SystemSetting::getValue('pos_auto_print_receipt', true);
         $defaultBillCustomerName = Auth::user()->name ?? 'Walk-in Customer';
+        $userLocations = Auth::user()->locations()
+            ->where('inventory_locations.is_active', true)
+            ->orderBy('inventory_locations.name')
+            ->get(['inventory_locations.id', 'inventory_locations.name', 'inventory_locations.branch_id']);
+        $selectedLocationId = (int) (session('location_id') ?? 0);
+        if ($selectedLocationId && !$userLocations->contains('id', $selectedLocationId)) {
+            $selectedLocationId = 0;
+        }
+        if (!$selectedLocationId && $userLocations->isNotEmpty()) {
+            $defaultLoc = Auth::user()->locations()
+                ->where('inventory_locations.is_active', true)
+                ->wherePivot('is_default', true)
+                ->first();
+            $selectedLocationId = (int) ($defaultLoc->id ?? $userLocations->first()->id);
+        }
 
         return view('sales.pos.index', compact(
             'walkInCustomer',
@@ -97,7 +112,9 @@ class PosSaleController extends Controller
             'defaultVatType',
             'posSaleMode',
             'posAutoPrintReceipt',
-            'defaultBillCustomerName'
+            'defaultBillCustomerName',
+            'userLocations',
+            'selectedLocationId'
         ));
     }
 
@@ -107,7 +124,7 @@ class PosSaleController extends Controller
     public function searchProducts(Request $request)
     {
         $companyId = auth()->user()->company_id;
-        $locationId = session('location_id');
+        $locationId = $this->resolveRequestLocationId($request);
         $branchId = session('branch_id') ?? (auth()->user()->branch_id ?? null);
         $search = trim((string) $request->input('search', ''));
         $category = trim((string) $request->input('category', ''));
@@ -179,7 +196,7 @@ class PosSaleController extends Controller
         }
 
         $companyId = auth()->user()->company_id;
-        $locationId = session('location_id');
+        $locationId = $this->resolveRequestLocationId($request);
         $branchId = session('branch_id') ?? (auth()->user()->branch_id ?? null);
 
         $item = InventoryItem::query()
@@ -223,7 +240,7 @@ class PosSaleController extends Controller
             ->where('created_by', Auth::id())
             ->when($branchId, fn ($q) => $q->where('branch_id', $branchId))
             ->whereDate('invoice_date', today())
-            ->with(['customer:id,name'])
+            ->with(['customer:id,name', 'inventoryLocation:id,name'])
             ->orderByDesc('invoice_date')
             ->orderByDesc('id')
             ->get();
@@ -249,6 +266,8 @@ class PosSaleController extends Controller
                 'is_paid' => $isPaid,
                 'status' => $isPaid ? 'paid' : 'unpaid',
                 'table_number' => $bill->table_number,
+                'location_id' => $bill->inventory_location_id,
+                'location_name' => $bill->inventoryLocation->name ?? null,
                 'can_add_items' => !$isPaid,
                 'can_print_receipt' => $canPrintReceipt,
                 'receipt_print_count' => $printService->getPrintCount($bill),
@@ -430,7 +449,7 @@ class PosSaleController extends Controller
         }
 
         $locationId = session('location_id');
-        if (!$locationId) {
+        if (!$locationId && !$request->filled('location_id')) {
             return response()->json([
                 'success' => false,
                 'message' => 'Please select a location before creating a bill.'
@@ -442,6 +461,7 @@ class PosSaleController extends Controller
             'customer_id' => 'required|integer',
             'customer_name' => 'nullable|string|max:255',
             'table_number' => 'nullable|string|max:50',
+            'location_id' => 'required|integer|exists:inventory_locations,id',
             'existing_bill_id' => 'nullable|string',
             'sale_date' => 'required|date',
             'currency' => 'nullable|string|max:3',
@@ -502,7 +522,8 @@ class PosSaleController extends Controller
                 $result = $billService->addItemsToBill(
                     $existingBill,
                     $request->items,
-                    $request->input('table_number')
+                    $request->input('table_number'),
+                    $request->input('location_id')
                 );
                 $invoice = $result['invoice'];
                 $round = $result['round'];
@@ -519,6 +540,8 @@ class PosSaleController extends Controller
                     'message' => 'Items added to bill #' . $invoice->invoice_number . ' (round ' . $round . ')',
                     'invoice_number' => $invoice->invoice_number,
                     'table_number' => $invoice->table_number,
+                    'location_id' => $invoice->inventory_location_id,
+                    'location_name' => $invoice->inventoryLocation->name ?? null,
                     'round' => $round,
                     'encoded_id' => $invoice->encoded_id,
                     'receipt_url' => $autoPrint ? $orderTicketUrl : null,
@@ -530,6 +553,7 @@ class PosSaleController extends Controller
                 'customer_id' => (int) $request->customer_id,
                 'customer_name' => $request->customer_name,
                 'table_number' => $request->input('table_number'),
+                'location_id' => $request->input('location_id'),
                 'sale_date' => $request->sale_date,
                 'currency' => $request->currency,
                 'exchange_rate' => $request->exchange_rate,
@@ -550,6 +574,8 @@ class PosSaleController extends Controller
                 'message' => 'Bill created successfully!',
                 'invoice_number' => $invoice->invoice_number,
                 'table_number' => $invoice->table_number,
+                'location_id' => $invoice->inventory_location_id,
+                'location_name' => $invoice->inventoryLocation->name ?? null,
                 'round' => 1,
                 'encoded_id' => $invoice->encoded_id,
                 'receipt_url' => $autoPrint ? $orderTicketUrl : null,
@@ -1692,6 +1718,23 @@ class PosSaleController extends Controller
                 'message' => 'Failed to record payment: ' . $e->getMessage(),
             ], 422);
         }
+    }
+
+    private function resolveRequestLocationId(Request $request): ?int
+    {
+        $requestedId = (int) $request->input('location_id', 0);
+        $sessionId = (int) (session('location_id') ?? 0);
+        $user = Auth::user();
+
+        if ($requestedId > 0 && $user->locations()->where('inventory_locations.id', $requestedId)->exists()) {
+            return $requestedId;
+        }
+
+        if ($sessionId > 0 && $user->locations()->where('inventory_locations.id', $sessionId)->exists()) {
+            return $sessionId;
+        }
+
+        return $sessionId ?: null;
     }
 
     private function userCanPrintPosReceipt(PosSale $posSale): bool
