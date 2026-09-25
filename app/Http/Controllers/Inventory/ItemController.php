@@ -908,9 +908,28 @@ class ItemController extends Controller
             $variant = 'basic';
         }
 
-        $filename = $variant === 'wholesale'
-            ? 'inventory_items_template_with_wholesale.csv'
-            : 'inventory_items_template.csv';
+        $catalog = strtolower((string) $request->query('catalog', 'kaunta'));
+        $isVip = $catalog === 'vip';
+        $isKaunta2 = in_array($catalog, ['kaunta2', 'k2'], true);
+        $isMainStore = in_array($catalog, ['main', 'mainstore', 'main-store', 'sto', 'stoo'], true);
+
+        if ($isVip) {
+            $filename = $variant === 'wholesale'
+                ? 'inventory_items_vip_with_wholesale.csv'
+                : 'inventory_items_vip.csv';
+        } elseif ($isKaunta2) {
+            $filename = $variant === 'wholesale'
+                ? 'inventory_items_kaunta2_with_wholesale.csv'
+                : 'inventory_items_kaunta2.csv';
+        } elseif ($isMainStore) {
+            $filename = $variant === 'wholesale'
+                ? 'inventory_items_main_store_with_wholesale.csv'
+                : 'inventory_items_main_store.csv';
+        } else {
+            $filename = $variant === 'wholesale'
+                ? 'inventory_items_template_with_wholesale.csv'
+                : 'inventory_items_template.csv';
+        }
 
         $headers = [
             'Content-Type' => 'text/csv',
@@ -931,7 +950,15 @@ class ItemController extends Controller
         ];
 
         // Sample beverage products (Prices in TZS); unit_price is column index 5
-        $baseSampleData = \App\Support\BeverageSampleCatalog::itemImportRows();
+        if ($isVip) {
+            $baseSampleData = \App\Support\VipBeverageCatalog::itemImportRows();
+        } elseif ($isKaunta2) {
+            $baseSampleData = \App\Support\Kaunta2BeverageCatalog::itemImportRows();
+        } elseif ($isMainStore) {
+            $baseSampleData = \App\Support\MainStoreBeverageCatalog::itemImportRows();
+        } else {
+            $baseSampleData = \App\Support\BeverageSampleCatalog::itemImportRows();
+        }
 
         $sampleData = [];
         $rowIndex = 0;

@@ -75,8 +75,17 @@
                                 </div>
                                 <div class="modal-footer d-flex justify-content-between align-items-center w-100 flex-wrap gap-2">
                                     <div class="d-flex gap-2 flex-wrap">
-                                        <a href="{{ route('inventory.opening-balances.template') }}" class="btn btn-outline-secondary" title="108 beverages with qty & cost from your notebook">
+                                        <a href="{{ route('inventory.opening-balances.template') }}" class="btn btn-outline-secondary" title="Kaunta/bar beverages with qty & cost from your notebook">
                                             <i class="bx bx-download me-1"></i> Download Prefilled Sample
+                                        </a>
+                                        <a href="{{ route('inventory.opening-balances.template', ['sample' => 'vip']) }}" class="btn btn-outline-primary" title="VIP location opening balance from MTAJI VIP notebook">
+                                            <i class="bx bx-download me-1"></i> Download VIP Sample
+                                        </a>
+                                        <a href="{{ route('inventory.opening-balances.template', ['sample' => 'kaunta2']) }}" class="btn btn-outline-primary" title="Kaunta 2 opening balance from notebook">
+                                            <i class="bx bx-download me-1"></i> Download Kaunta2 Sample
+                                        </a>
+                                        <a href="{{ route('inventory.opening-balances.template', ['sample' => 'main']) }}" class="btn btn-outline-primary" title="Main Store (MTAJI STOO) opening balance from notebook">
+                                            <i class="bx bx-download me-1"></i> Download Main Store Sample
                                         </a>
                                         <a href="{{ route('inventory.opening-balances.template', ['sample' => 0]) }}" class="btn btn-outline-secondary" title="Items already in system without opening balance">
                                             <i class="bx bx-list-ul me-1"></i> From My Items

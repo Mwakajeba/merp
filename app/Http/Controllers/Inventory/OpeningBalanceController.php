@@ -616,10 +616,23 @@ class OpeningBalanceController extends Controller
     {
         $this->authorize('viewAny', Item::class);
 
-        $useSample = $request->boolean('sample', true);
-        $filename = $useSample
-            ? 'opening_balance_sample_beverages.csv'
-            : 'opening_balance_template.csv';
+        $sample = strtolower((string) $request->query('sample', '1'));
+        $useVip = in_array($sample, ['vip'], true);
+        $useKaunta2 = in_array($sample, ['kaunta2', 'k2'], true);
+        $useMainStore = in_array($sample, ['main', 'mainstore', 'main-store', 'sto', 'stoo'], true);
+        $useSample = !in_array($sample, ['0', 'false', 'no', 'items'], true);
+
+        if ($useVip) {
+            $filename = 'opening_balance_vip.csv';
+        } elseif ($useKaunta2) {
+            $filename = 'opening_balance_kaunta2.csv';
+        } elseif ($useMainStore) {
+            $filename = 'opening_balance_main_store.csv';
+        } elseif ($useSample) {
+            $filename = 'opening_balance_sample_beverages.csv';
+        } else {
+            $filename = 'opening_balance_template.csv';
+        }
 
         $headers = [
             'Content-Type' => 'text/csv',
@@ -630,7 +643,19 @@ class OpeningBalanceController extends Controller
         // Header (item_name is optional - only for user reference)
         $rows[] = ['item_name', 'item_code', 'quantity', 'unit_cost', 'has_expiry_date', 'expiry_date'];
 
-        if ($useSample) {
+        if ($useVip) {
+            foreach (\App\Support\VipBeverageCatalog::openingBalanceRows() as $row) {
+                $rows[] = $row;
+            }
+        } elseif ($useKaunta2) {
+            foreach (\App\Support\Kaunta2BeverageCatalog::openingBalanceRows() as $row) {
+                $rows[] = $row;
+            }
+        } elseif ($useMainStore) {
+            foreach (\App\Support\MainStoreBeverageCatalog::openingBalanceRows() as $row) {
+                $rows[] = $row;
+            }
+        } elseif ($useSample) {
             // Pre-filled quantities & costs from notebook sample (import items first)
             foreach (\App\Support\BeverageSampleCatalog::openingBalanceRows() as $row) {
                 $rows[] = $row;

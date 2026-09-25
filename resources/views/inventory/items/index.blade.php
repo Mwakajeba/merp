@@ -187,6 +187,22 @@
                                         <i class="bx bx-layer me-1"></i> With wholesale columns
                                     </a>
                                 </li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li>
+                                    <a class="dropdown-item" href="{{ route('inventory.items.download-template', ['variant' => 'basic', 'catalog' => 'vip']) }}">
+                                        <i class="bx bx-star me-1"></i> VIP location items
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" href="{{ route('inventory.items.download-template', ['variant' => 'basic', 'catalog' => 'kaunta2']) }}">
+                                        <i class="bx bx-store me-1"></i> Kaunta 2 items
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" href="{{ route('inventory.items.download-template', ['variant' => 'basic', 'catalog' => 'main']) }}">
+                                        <i class="bx bx-building me-1"></i> Main Store items
+                                    </a>
+                                </li>
                             </ul>
                         </div>
                     </div>
