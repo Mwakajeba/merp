@@ -188,7 +188,7 @@
                                 </li>
                                 <li class="nav-item">
                                     <button type="button" class="nav-link" id="tabTodayBills" data-panel="today-bills">
-                                        <i class="bx bx-receipt me-1"></i> My Today's Bills
+                                        <i class="bx bx-receipt me-1"></i> My Bills
                                         <span class="badge bg-primary ms-1" id="todayBillsCount">0</span>
                                     </button>
                                 </li>
@@ -237,6 +237,13 @@
                         @if(($posSaleMode ?? 'direct') === 'bill')
                         <div id="todayBillsPanel" class="d-none">
                             <div class="products-scroll-container" style="height: 500px; overflow-y: auto; border: 1px solid #e9ecef; border-radius: 8px; padding: 15px;">
+                                <div class="d-flex flex-wrap align-items-end justify-content-between gap-2 mb-3">
+                                    <div>
+                                        <label for="myBillsDate" class="form-label small mb-1">Bill date</label>
+                                        <input type="date" class="form-control form-control-sm" id="myBillsDate" value="{{ now()->toDateString() }}" max="{{ now()->toDateString() }}">
+                                    </div>
+                                    <small class="text-muted mb-1">Your bills at this location for the selected date.</small>
+                                </div>
                                 <div id="todayBillsSummary" class="row g-2 mb-3 d-none">
                                     <div class="col-4">
                                         <div class="border rounded p-2 text-center bg-light">
@@ -266,7 +273,7 @@
                                 <div id="todayBillsList" class="row g-2"></div>
                                 <div id="todayBillsEmpty" class="text-center py-4 d-none">
                                     <i class="bx bx-receipt fs-1 text-muted"></i>
-                                    <p class="text-muted mt-2 mb-0">No bills created today</p>
+                                    <p class="text-muted mt-2 mb-0" id="todayBillsEmptyText">No bills on this date</p>
                                 </div>
                             </div>
                         </div>
@@ -1028,7 +1035,86 @@ const todayBillsConfig = posSaleMode === 'bill' ? {
     url: @json(route('sales.pos.today-bills')),
 } : null;
 
-let todayBillsLoaded = false;
+let todayBillsLoadedDate = null;
+
+async function loadTodayBills(force = false) {
+    if (!todayBillsConfig) {
+        return;
+    }
+
+    const dateInput = document.getElementById('myBillsDate');
+    const billDate = dateInput?.value || '';
+    const todayValue = dateInput?.max || billDate;
+    const isToday = !billDate || billDate === todayValue;
+
+    if (!force && todayBillsLoadedDate === billDate) {
+        return;
+    }
+
+    const loadingEl = document.getElementById('todayBillsLoading');
+    const listEl = document.getElementById('todayBillsList');
+    const emptyEl = document.getElementById('todayBillsEmpty');
+    const emptyTextEl = document.getElementById('todayBillsEmptyText');
+    const countEl = document.getElementById('todayBillsCount');
+
+    if (!loadingEl || !listEl) {
+        return;
+    }
+
+    loadingEl.classList.remove('d-none');
+    emptyEl.classList.add('d-none');
+    listEl.innerHTML = '';
+
+    try {
+        const url = new URL(todayBillsConfig.url, window.location.origin);
+        if (billDate) {
+            url.searchParams.set('date', billDate);
+        }
+
+        const response = await fetch(url.toString(), {
+            headers: {
+                'Accept': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to load bills');
+        }
+
+        const data = await response.json();
+        const bills = data.bills || [];
+        if (isToday) {
+            populateOpenBillSelect(bills);
+        }
+
+        if (countEl && isToday) {
+            countEl.textContent = String(data.count ?? bills.length);
+        }
+
+        if (bills.length === 0) {
+            updateTodayBillsSummary(null);
+            if (emptyTextEl) {
+                emptyTextEl.textContent = 'No bills on this date';
+            }
+            emptyEl.classList.remove('d-none');
+        } else {
+            updateTodayBillsSummary(data.summary || null);
+            listEl.innerHTML = bills.map(buildTodayBillCard).join('');
+        }
+
+        todayBillsLoadedDate = billDate;
+    } catch (error) {
+        console.error(error);
+        updateTodayBillsSummary(null);
+        if (emptyTextEl) {
+            emptyTextEl.textContent = 'Failed to load bills';
+        }
+        emptyEl.classList.remove('d-none');
+    } finally {
+        loadingEl.classList.add('d-none');
+    }
+}
 
 function formatMoney(amount, currency) {
     return Number(amount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ' + (currency || 'TZS');
@@ -1114,66 +1200,6 @@ function updateTodayBillsSummary(summary) {
     summaryEl.classList.remove('d-none');
 }
 
-async function loadTodayBills(force = false) {
-    if (!todayBillsConfig) {
-        return;
-    }
-    if (todayBillsLoaded && !force) {
-        return;
-    }
-
-    const loadingEl = document.getElementById('todayBillsLoading');
-    const listEl = document.getElementById('todayBillsList');
-    const emptyEl = document.getElementById('todayBillsEmpty');
-    const countEl = document.getElementById('todayBillsCount');
-
-    if (!loadingEl || !listEl) {
-        return;
-    }
-
-    loadingEl.classList.remove('d-none');
-    emptyEl.classList.add('d-none');
-    listEl.innerHTML = '';
-
-    try {
-        const response = await fetch(todayBillsConfig.url, {
-            headers: {
-                'Accept': 'application/json',
-                'X-Requested-With': 'XMLHttpRequest',
-            },
-        });
-
-        if (!response.ok) {
-            throw new Error('Failed to load bills');
-        }
-
-        const data = await response.json();
-        const bills = data.bills || [];
-        populateOpenBillSelect(bills);
-
-        if (countEl) {
-            countEl.textContent = String(data.count ?? bills.length);
-        }
-
-        if (bills.length === 0) {
-            updateTodayBillsSummary(null);
-            emptyEl.classList.remove('d-none');
-        } else {
-            updateTodayBillsSummary(data.summary || null);
-            listEl.innerHTML = bills.map(buildTodayBillCard).join('');
-        }
-
-        todayBillsLoaded = true;
-    } catch (error) {
-        console.error(error);
-        updateTodayBillsSummary(null);
-        emptyEl.classList.remove('d-none');
-        emptyEl.querySelector('p').textContent = 'Failed to load today\'s bills';
-    } finally {
-        loadingEl.classList.add('d-none');
-    }
-}
-
 function switchProductsPanel(panel) {
     const productsPanel = document.getElementById('productsPanel');
     const todayBillsPanel = document.getElementById('todayBillsPanel');
@@ -1197,6 +1223,7 @@ function switchProductsPanel(panel) {
 if (posSaleMode === 'bill') {
     document.getElementById('tabProducts')?.addEventListener('click', () => switchProductsPanel('products'));
     document.getElementById('tabTodayBills')?.addEventListener('click', () => switchProductsPanel('today-bills'));
+    document.getElementById('myBillsDate')?.addEventListener('change', () => loadTodayBills(true));
     loadTodayBills(true);
 }
 
@@ -2475,7 +2502,7 @@ function processSale() {
                     if (existingSelect) existingSelect.value = '';
                     updateBillActionButton();
                     selectCustomer(0, defaultBillCustomerName);
-                    todayBillsLoaded = false;
+                    todayBillsLoadedDate = null;
                     loadTodayBills(true);
                 }
                 document.getElementById('cartDiscountType').value = 'none';

@@ -228,19 +228,29 @@ class PosSaleController extends Controller
     }
 
     /**
-     * Today's POS bills created by the current user (bill mode).
+     * POS bills created by the current salesperson for a given date (bill mode).
      */
     public function todayBills(Request $request)
     {
         $branchId = session('branch_id') ?? (Auth::user()->branch_id ?? null);
+        $locationId = $this->resolveSessionLocationId();
         $autoPrint = (bool) SystemSetting::getValue('pos_auto_print_receipt', true);
         $printService = app(PosReceiptPrintService::class);
+
+        try {
+            $billDate = $request->filled('date')
+                ? \Carbon\Carbon::parse($request->input('date'))->toDateString()
+                : today()->toDateString();
+        } catch (\Throwable $e) {
+            $billDate = today()->toDateString();
+        }
 
         $bills = SalesInvoice::query()
             ->where('reference_no', PosBillService::REFERENCE_NO)
             ->where('created_by', Auth::id())
             ->when($branchId, fn ($q) => $q->where('branch_id', $branchId))
-            ->whereDate('invoice_date', today())
+            ->when($locationId, fn ($q) => $q->where('inventory_location_id', $locationId))
+            ->whereDate('invoice_date', $billDate)
             ->with(['customer:id,name', 'inventoryLocation:id,name'])
             ->orderByDesc('invoice_date')
             ->orderByDesc('id')
@@ -282,6 +292,7 @@ class PosSaleController extends Controller
         return response()->json([
             'bills' => $payload,
             'count' => $payload->count(),
+            'date' => $billDate,
             'summary' => [
                 'total_bills' => round((float) $bills->sum('total_amount'), 2),
                 'paid' => round((float) $bills->sum('paid_amount'), 2),
