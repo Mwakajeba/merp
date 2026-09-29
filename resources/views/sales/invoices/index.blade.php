@@ -176,6 +176,15 @@
                                     <option value="full_paid">Full Paid</option>
                                 </select>
                             </div>
+                            <div class="col-md-3">
+                                <label for="filter-location" class="form-label">Location</label>
+                                <select id="filter-location" class="form-select">
+                                    <option value="">All Locations</option>
+                                    @foreach($locations as $location)
+                                        <option value="{{ $location->id }}">{{ $location->name }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
                             <div class="col-md-3 d-flex align-items-end">
                                 <button type="button" class="btn btn-secondary" id="filter-reset">
                                     <i class="bx bx-refresh me-1"></i>Reset
@@ -189,6 +198,7 @@
                                         <th>Invoice #</th>
                                         <th>Reference</th>
                                         <th>Customer</th>
+                                        <th>Location</th>
                                         <th>Date</th>
                                         <th>Due Date</th>
                                         <th>Status</th>
@@ -222,12 +232,14 @@ $(document).ready(function() {
             type: 'GET',
             data: function(d) {
                 d.payment_status = $('#filter-payment-status').val();
+                d.location_id = $('#filter-location').val();
             }
         },
         columns: [
             {data: 'invoice_number', name: 'invoice_number'},
             {data: 'reference_no', name: 'reference_no'},
             {data: 'customer_name', name: 'customer_name'},
+            {data: 'location_name', name: 'location_name', orderable: false, searchable: false},
             {data: 'formatted_date', name: 'invoice_date'},
             {data: 'formatted_due_date', name: 'due_date'},
             {data: 'status_badge', name: 'status'},
@@ -236,7 +248,7 @@ $(document).ready(function() {
             {data: 'created_by_name', name: 'created_by'},
             {data: 'actions', name: 'actions', orderable: false, searchable: false}
         ],
-        order: [[3, 'desc']], // Sort by date descending
+        order: [[4, 'desc']], // Sort by date descending
         pageLength: 25,
         language: {
             processing: '<div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div>',
@@ -254,12 +266,13 @@ $(document).ready(function() {
         }
     });
 
-    $('#filter-payment-status').on('change', function() {
+    $('#filter-payment-status, #filter-location').on('change', function() {
         table.ajax.reload();
     });
 
     $('#filter-reset').on('click', function() {
         $('#filter-payment-status').val('');
+        $('#filter-location').val('');
         table.ajax.reload();
     });
 

@@ -20,6 +20,7 @@ use App\Services\Sales\PosReceiptPrintService;
 use App\Mail\SalesInvoiceMail;
 use App\Traits\GetsCurrenciesFromFxRates;
 use App\Models\BankAccount;
+use App\Models\InventoryLocation;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -65,7 +66,7 @@ class SalesInvoiceController extends Controller
         //     'permissions' => auth()->user()->getAllPermissions()->pluck('name')->toArray()
         // ]);
         if ($request->ajax()) {
-            $invoices = SalesInvoice::with(['customer', 'branch', 'createdBy'])
+            $invoices = SalesInvoice::with(['customer', 'branch', 'createdBy', 'inventoryLocation'])
                 ->where('company_id', auth()->user()->company_id)
                 ->when(auth()->user()->branch_id, function($query) {
                     return $query->where('branch_id', auth()->user()->branch_id);
@@ -76,7 +77,10 @@ class SalesInvoiceController extends Controller
                 ->when($request->filled('payment_status'), function ($query) use ($request) {
                     $this->applyPaymentStatusFilter($query, $request->input('payment_status'));
                 })
-                ->select(['id', 'invoice_number', 'reference_no', 'customer_id', 'invoice_date', 'due_date', 'status', 'total_amount', 'paid_amount', 'balance_due', 'currency', 'branch_id', 'created_by', 'created_at']);
+                ->when($request->filled('location_id'), function ($query) use ($request) {
+                    $query->where('inventory_location_id', (int) $request->input('location_id'));
+                })
+                ->select(['id', 'invoice_number', 'reference_no', 'customer_id', 'invoice_date', 'due_date', 'status', 'total_amount', 'paid_amount', 'balance_due', 'currency', 'branch_id', 'inventory_location_id', 'created_by', 'created_at']);
 
             return datatables($invoices)
                 ->filter(function ($query) use ($request) {
@@ -99,6 +103,9 @@ class SalesInvoiceController extends Controller
                 })
                 ->addColumn('customer_name', function ($invoice) {
                     return $invoice->customer->name;
+                })
+                ->addColumn('location_name', function ($invoice) {
+                    return $invoice->inventoryLocation->name ?? '—';
                 })
                 ->addColumn('branch_name', function ($invoice) {
                     return $invoice->branch->name;
@@ -177,7 +184,11 @@ class SalesInvoiceController extends Controller
                 return $query->where('branch_id', auth()->user()->branch_id);
             })->sum('balance_due');
 
-        return view('sales.invoices.index', compact('totalInvoices', 'totalAmount', 'totalPaid', 'totalOutstanding'));
+        $locations = InventoryLocation::where('company_id', auth()->user()->company_id)
+            ->orderBy('name')
+            ->get(['id', 'name']);
+
+        return view('sales.invoices.index', compact('totalInvoices', 'totalAmount', 'totalPaid', 'totalOutstanding', 'locations'));
     }
 
     private function applyPaymentStatusFilter($query, ?string $paymentStatus): void

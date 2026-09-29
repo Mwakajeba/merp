@@ -39,6 +39,9 @@
                         <h5 class="card-title mb-3">Unpaid Bills</h5>
                         <p class="text-muted small mb-3">
                             Search by customer name, phone, customer number, or bill number.
+                            @if($location ?? null)
+                                <span class="d-block">Location: <strong>{{ $location->name }}</strong></span>
+                            @endif
                             @unless($canViewAllBills ?? false)
                                 <span class="d-block">You only see bills you created.</span>
                             @endunless

@@ -7,7 +7,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * Destructive wipe: inventory items + sales + opening balances
+ * Destructive wipe: inventory items + sales + opening balances + GL
  * (and related rows required to satisfy foreign keys).
  *
  * Usage:
@@ -22,7 +22,7 @@ class WipeItemsSalesAndOpeningBalances extends Command
                             {--force : Skip confirmation and run the wipe}
                             {--dry-run : Show row counts without deleting}';
 
-    protected $description = 'Delete all inventory items, sales, opening balances, and related stock/sales data';
+    protected $description = 'Delete inventory items, sales, opening balances, GL journals/transactions, and related data';
 
     public function handle(): int
     {
@@ -40,6 +40,13 @@ class WipeItemsSalesAndOpeningBalances extends Command
 
         // Delete order: children first, inventory_items last.
         $tables = [
+            // GL / journals
+            'journal_entry_approvals',
+            'gl_revaluation_history',
+            'gl_transactions',
+            'journal_items',
+            'journals',
+
             'credit_note_applications',
             'credit_note_items',
             'credit_notes',
@@ -101,16 +108,39 @@ class WipeItemsSalesAndOpeningBalances extends Command
         $existing = array_values(array_filter($tables, fn ($t) => Schema::hasTable($t)));
 
         $itemIds = null;
-        if ($companyId !== null && Schema::hasTable('inventory_items')) {
-            $itemIds = DB::table('inventory_items')->where('company_id', $companyId)->pluck('id')->all();
+        $branchIds = null;
+        $userIds = null;
+        $journalIds = null;
+
+        if ($companyId !== null) {
+            if (Schema::hasTable('inventory_items')) {
+                $itemIds = DB::table('inventory_items')->where('company_id', $companyId)->pluck('id')->all();
+            }
+            if (Schema::hasTable('branches') && Schema::hasColumn('branches', 'company_id')) {
+                $branchIds = DB::table('branches')->where('company_id', $companyId)->pluck('id')->all();
+            }
+            if (Schema::hasTable('users') && Schema::hasColumn('users', 'company_id')) {
+                $userIds = DB::table('users')->where('company_id', $companyId)->pluck('id')->all();
+            }
+            if (Schema::hasTable('journals')) {
+                $jq = DB::table('journals');
+                if (Schema::hasColumn('journals', 'company_id')) {
+                    $jq->where('company_id', $companyId);
+                } elseif ($branchIds) {
+                    $jq->whereIn('branch_id', $branchIds);
+                } elseif ($userIds) {
+                    $jq->whereIn('user_id', $userIds);
+                }
+                $journalIds = $jq->pluck('id')->all();
+            }
         }
 
-        $this->warn($dryRun ? 'DRY RUN — nothing will be deleted.' : 'DESTRUCTIVE WIPE');
+        $this->warn($dryRun ? 'DRY RUN — nothing will be deleted.' : 'DESTRUCTIVE WIPE (includes GL)');
         $this->info($companyId ? "Scope: company_id = {$companyId}" : 'Scope: ALL companies');
 
         $rows = [];
         foreach ($existing as $table) {
-            $rows[] = [$table, $this->countForTable($table, $companyId, $itemIds)];
+            $rows[] = [$table, $this->countForTable($table, $companyId, $itemIds, $branchIds, $userIds, $journalIds)];
         }
         $this->table(['table', 'rows to clear'], $rows);
 
@@ -123,38 +153,53 @@ class WipeItemsSalesAndOpeningBalances extends Command
         Schema::disableForeignKeyConstraints();
         try {
             foreach ($existing as $table) {
-                $deleted = $this->deleteForTable($table, $companyId, $itemIds);
+                $deleted = $this->deleteForTable($table, $companyId, $itemIds, $branchIds, $userIds, $journalIds);
                 $this->line("Cleared {$table} ({$deleted} rows)");
             }
         } finally {
             Schema::enableForeignKeyConstraints();
         }
 
-        $this->info('Done.');
+        $this->info('Done. Items, sales, opening balances, and GL wiped.');
 
         return self::SUCCESS;
     }
 
-    private function countForTable(string $table, ?int $companyId, ?array $itemIds): int
-    {
-        return $this->queryForTable(DB::table($table), $table, $companyId, $itemIds)->count();
+    private function countForTable(
+        string $table,
+        ?int $companyId,
+        ?array $itemIds,
+        ?array $branchIds,
+        ?array $userIds,
+        ?array $journalIds
+    ): int {
+        return $this->queryForTable(DB::table($table), $table, $companyId, $itemIds, $branchIds, $userIds, $journalIds)->count();
     }
 
-    private function deleteForTable(string $table, ?int $companyId, ?array $itemIds): int
-    {
+    private function deleteForTable(
+        string $table,
+        ?int $companyId,
+        ?array $itemIds,
+        ?array $branchIds,
+        ?array $userIds,
+        ?array $journalIds
+    ): int {
         if ($companyId === null) {
             return DB::table($table)->delete();
         }
 
-        return $this->queryForTable(DB::table($table), $table, $companyId, $itemIds)->delete();
+        return $this->queryForTable(DB::table($table), $table, $companyId, $itemIds, $branchIds, $userIds, $journalIds)->delete();
     }
 
     /**
      * @param  \Illuminate\Database\Query\Builder  $q
      * @param  list<int>|null  $itemIds
+     * @param  list<int>|null  $branchIds
+     * @param  list<int>|null  $userIds
+     * @param  list<int>|null  $journalIds
      * @return \Illuminate\Database\Query\Builder
      */
-    private function queryForTable($q, string $table, ?int $companyId, ?array $itemIds)
+    private function queryForTable($q, string $table, ?int $companyId, ?array $itemIds, ?array $branchIds, ?array $userIds, ?array $journalIds)
     {
         if ($companyId === null) {
             return $q;
@@ -162,6 +207,25 @@ class WipeItemsSalesAndOpeningBalances extends Command
 
         if (Schema::hasColumn($table, 'company_id')) {
             return $q->where('company_id', $companyId);
+        }
+
+        // Journal children
+        if ($table === 'journal_items' || $table === 'journal_entry_approvals') {
+            if (! $journalIds) {
+                return $q->whereRaw('1 = 0');
+            }
+
+            return $q->whereIn('journal_id', $journalIds);
+        }
+
+        // GL / journals scoped by branch or user
+        if (in_array($table, ['gl_transactions', 'journals', 'gl_revaluation_history'], true)) {
+            if ($branchIds && Schema::hasColumn($table, 'branch_id')) {
+                return $q->whereIn('branch_id', $branchIds);
+            }
+            if ($userIds && Schema::hasColumn($table, 'user_id')) {
+                return $q->whereIn('user_id', $userIds);
+            }
         }
 
         // Child tables: scope via item FK when possible

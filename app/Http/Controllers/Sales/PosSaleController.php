@@ -10,6 +10,7 @@ use App\Models\Inventory\Item as InventoryItem;
 use App\Models\Customer;
 use App\Models\Branch;
 use App\Models\BankAccount;
+use App\Models\InventoryLocation;
 use App\Models\Inventory\Movement;
 use App\Models\Inventory\Item;
 use App\Models\SystemSetting;
@@ -1486,7 +1487,9 @@ class PosSaleController extends Controller
             return $this->cashierBillsData($request);
         }
 
+        $locationId = $this->resolveSessionLocationId();
         $branchId = session('branch_id') ?? (Auth::user()->branch_id ?? null);
+        $location = $locationId ? InventoryLocation::find($locationId) : null;
 
         $bankAccounts = BankAccount::orderBy('name')
             ->when($branchId, function ($q) use ($branchId) {
@@ -1499,24 +1502,51 @@ class PosSaleController extends Controller
 
         $canViewAllBills = Auth::user()->can('view all pos bills');
 
-        return view('sales.pos.cashier', compact('bankAccounts', 'canViewAllBills'));
+        return view('sales.pos.cashier', compact('bankAccounts', 'canViewAllBills', 'location'));
     }
 
     /**
-     * Base query for open POS bills visible to the current cashier.
+     * Base query for open POS bills visible to the current cashier at the login location.
      */
     protected function openBillsQuery()
     {
         $branchId = session('branch_id') ?? (Auth::user()->branch_id ?? null);
+        $locationId = $this->resolveSessionLocationId();
 
         $query = SalesInvoice::query()
             ->where('reference_no', PosBillService::REFERENCE_NO)
             ->where('company_id', Auth::user()->company_id)
             ->when($branchId, fn ($q) => $q->where('branch_id', $branchId))
+            ->when($locationId, fn ($q) => $q->where('inventory_location_id', $locationId))
             ->where('balance_due', '>', 0)
             ->whereNotIn('status', ['paid', 'cancelled']);
 
         return PosBillService::applyCashierBillVisibility($query);
+    }
+
+    /**
+     * Login inventory location, falling back to the user's default or first assigned location.
+     */
+    protected function resolveSessionLocationId(): ?int
+    {
+        $locationId = session('location_id');
+        if ($locationId) {
+            return (int) $locationId;
+        }
+
+        $user = Auth::user();
+        if (!$user) {
+            return null;
+        }
+
+        $location = $user->defaultLocation()->first() ?: $user->locations()->first();
+        if (!$location) {
+            return null;
+        }
+
+        session(['location_id' => $location->id, 'branch_id' => $location->branch_id]);
+
+        return (int) $location->id;
     }
 
     /**
@@ -1661,6 +1691,11 @@ class PosSaleController extends Controller
 
         if (!PosBillService::userCanAccessBill($invoice)) {
             return response()->json(['success' => false, 'message' => 'You can only pay your own POS bills.'], 403);
+        }
+
+        $locationId = $this->resolveSessionLocationId();
+        if ($locationId && (int) $invoice->inventory_location_id !== $locationId) {
+            return response()->json(['success' => false, 'message' => 'This bill belongs to another location.'], 403);
         }
 
         if ($invoice->reference_no !== PosBillService::REFERENCE_NO) {
