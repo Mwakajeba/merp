@@ -235,12 +235,12 @@
 
 @push('scripts')
 <script nonce="{{ $cspNonce ?? '' }}">
-    (function () {
+    $(function () {
         const maduara = @json($maduaraKwaJs);
         const walipuaji = @json($walipuajiKwaJs);
-        const duaraSelect = document.getElementById('duara_id');
-        const msimamiziSelect = document.getElementById('msimamizi_id');
-        const mlipuziSelect = document.getElementById('mlipuzi_id');
+        const $duara = $('#duara_id');
+        const $msimamizi = $('#msimamizi_id');
+        const $mlipuzi = $('#mlipuzi_id');
         const bcBox = document.getElementById('bc-no');
         const onyo = document.getElementById('msimamizi-onyo');
 
@@ -248,64 +248,49 @@
             return msimamizi.simu ? msimamizi.jina + ' (' + msimamizi.simu + ')' : msimamizi.jina;
         }
 
-        function jazaWasimamizi() {
-            const duara = maduara.find(function (item) {
-                return String(item.id) === String(duaraSelect.value);
-            });
-            const yaSasa = msimamiziSelect.value;
-            const orodha = duara ? duara.wasimamizi : [];
-
-            msimamiziSelect.innerHTML = '';
-            const kichwa = document.createElement('option');
-            kichwa.value = '';
-            kichwa.textContent = 'Chagua msimamizi';
-            msimamiziSelect.appendChild(kichwa);
-
-            orodha.forEach(function (msimamizi) {
-                const option = document.createElement('option');
-                option.value = msimamizi.id;
-                option.textContent = jinaLaMsimamizi(msimamizi);
-                if (String(msimamizi.id) === String(yaSasa)) {
-                    option.selected = true;
-                }
-                msimamiziSelect.appendChild(option);
-            });
-
-            onyo.hidden = !duara || orodha.length > 0;
-            sasishaSelect2(msimamiziSelect);
-        }
-
-        function sasishaSelect2(select) {
-            if (!window.jQuery) {
-                return;
+        function chaguo(select, placeholder) {
+            if (select.hasClass('select2-hidden-accessible')) {
+                select.select2('destroy');
             }
-            const $select = window.jQuery(select);
-            if (!$select.hasClass('select2-hidden-accessible')) {
-                return;
-            }
-            $select.select2('destroy');
-            $select.select2({
-                placeholder: 'Chagua msimamizi',
+            select.select2({
+                placeholder: placeholder,
                 allowClear: true,
                 width: '100%',
                 theme: 'bootstrap-5'
             });
         }
 
+        function jazaWasimamizi(wekaUpya) {
+            const duara = maduara.find(function (item) {
+                return String(item.id) === String($duara.val());
+            });
+            const yaSasa = wekaUpya ? '' : String($msimamizi.val() || '');
+            const orodha = duara ? duara.wasimamizi : [];
+
+            $msimamizi.empty();
+            $msimamizi.append(new Option('Chagua msimamizi', '', false, yaSasa === ''));
+            orodha.forEach(function (msimamizi) {
+                const amechaguliwa = String(msimamizi.id) === yaSasa;
+                $msimamizi.append(new Option(jinaLaMsimamizi(msimamizi), msimamizi.id, amechaguliwa, amechaguliwa));
+            });
+
+            onyo.hidden = !duara || orodha.length > 0;
+            chaguo($msimamizi, 'Chagua msimamizi');
+        }
+
         function onyeshaBc() {
             const mtu = walipuaji.find(function (item) {
-                return String(item.id) === String(mlipuziSelect.value);
+                return String(item.id) === String($mlipuzi.val());
             });
             bcBox.textContent = mtu && mtu.bc ? mtu.bc : '—';
         }
 
-        duaraSelect.addEventListener('change', function () {
-            msimamiziSelect.value = '';
-            jazaWasimamizi();
+        $duara.on('change', function () {
+            jazaWasimamizi(true);
         });
-        mlipuziSelect.addEventListener('change', onyeshaBc);
-        jazaWasimamizi();
+        $mlipuzi.on('change', onyeshaBc);
+        jazaWasimamizi(false);
         onyeshaBc();
-    })();
+    });
 </script>
 @endpush
