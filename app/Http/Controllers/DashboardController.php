@@ -19,6 +19,9 @@ use App\Models\FiscalYear;
 use App\Services\InventoryStockService;
 use App\Services\InventoryCostService;
 use App\Models\Inventory\Item as InventoryItem;
+use App\Models\Milipuko\Duara;
+use App\Models\Milipuko\Kibali;
+use App\Models\Milipuko\Mlipuzi;
 use App\Models\Sales\CashSale;
 use App\Models\Sales\PosSale;
 use Carbon\Carbon;
@@ -28,176 +31,12 @@ class DashboardController extends Controller
 {
     public function index()
     {
-        $user = auth()->user();
-
-        if ($user->hasRole('sales-person')) {
-            return redirect()->route('sales.pos.index');
-        }
-
-        $startedAt = microtime(true);
-        $company = $user->company;
-        
-        if (!$company) {
-            return view('dashboard', [
-                'balanceSheetData' => [],
-                'financialReportData' => [],
-                'recentJournals' => collect(),
-                'recentPayments' => collect(),
-                'recentReceipts' => collect(),
-                'previousYearData' => [],
-                'totalInventoryValue' => 0,
-                'totalInventoryItemsCount' => 0,
-                'totalSalesToday' => 0,
-                'grossProfitMtd' => 0,
-                'totalExpensesToday' => 0,
-                'outstandingInvoicesAmount' => 0,
-                'outstandingInvoicesCount' => 0,
-                'totalCustomers' => 0,
-                'roomsOccupied' => 0,
-                'totalRooms' => 0,
-                'todaysBookingsValue' => 0,
-                'todaysBookingsCount' => 0,
-                'receivablesAging' => [],
-                'branches' => collect(),
-                'selectedBranchId' => null,
-                'pendingApprovalsCount' => 0,
-            ]);
-        }
-        // Resolve permitted branches for this user
-        $permittedBranchIds = $this->getPermittedBranchIds($user);
-        if (empty($permittedBranchIds) && $user->branch_id) {
-            $permittedBranchIds = [(int)$user->branch_id];
-        }
-        // Selected branch logic: default to user's only branch, otherwise allow All (null)
-        $defaultSelected = count($permittedBranchIds) === 1 ? $permittedBranchIds[0] : null;
-        $selectedBranchId = request()->has('branch_id') ? request('branch_id') : $defaultSelected;
-        $branchId = $this->normalizeBranchId($selectedBranchId);
-        // Persist specific selection for header badge.
-        // Do not clear session branch here because require.branch middleware needs it for route access.
-        if ($branchId) {
-            session(['branch_id' => $branchId]);
-        }
-        $today = now()->toDateString();
-        $startOfMonth = now()->startOfMonth()->toDateString();
-        $endOfMonth = now()->endOfMonth()->toDateString();
-
-        // Get recent activities - filter by company and branch and current month
-        $recentJournals = Journal::whereHas('branch', function($query) use ($company) {
-            $query->where('company_id', $company->id);
-        })
-        ->when(!empty($permittedBranchIds), fn($q) => $q->whereIn('branch_id', $permittedBranchIds))
-        ->when($branchId, fn($q) => $q->where('branch_id', $branchId))
-        ->whereBetween('date', [$startOfMonth, $endOfMonth])
-        ->with(['user', 'branch'])
-        ->latest()
-        ->take(5)
-        ->get();
-        
-        $recentPayments = Payment::whereHas('branch', function($query) use ($company) {
-            $query->where('company_id', $company->id);
-        })
-        ->when(!empty($permittedBranchIds), fn($q) => $q->whereIn('branch_id', $permittedBranchIds))
-        ->when($branchId, fn($q) => $q->where('branch_id', $branchId))
-        ->whereBetween('date', [$startOfMonth, $endOfMonth])
-        ->with(['user', 'branch'])
-        ->latest()
-        ->take(5)
-        ->get();
-        
-        $recentReceipts = Receipt::whereHas('branch', function($query) use ($company) {
-            $query->where('company_id', $company->id);
-        })
-        ->when(!empty($permittedBranchIds), fn($q) => $q->whereIn('branch_id', $permittedBranchIds))
-        ->when($branchId, fn($q) => $q->where('branch_id', $branchId))
-        ->whereBetween('date', [$startOfMonth, $endOfMonth])
-        ->with(['user', 'branch', 'customer'])
-        ->latest()
-        ->take(5)
-        ->get();
-            
-
-
-        
-        // Restore essential financial payload (cache-backed) so dashboard is populated.
-        $currentFiscalYear = FiscalYear::forCompany($company->id)
-            ->whereDate('start_date', '<=', $today)
-            ->whereDate('end_date', '>=', $today)
-            ->orderBy('start_date', 'desc')
-            ->first();
-
-        if ($currentFiscalYear) {
-            $ytdStart = $currentFiscalYear->start_date->toDateString();
-            $ytdEnd = $today;
-        } else {
-            $ytdStart = now()->startOfYear()->toDateString();
-            $ytdEnd = $today;
-        }
-
-        $balanceSheetData = $this->getBalanceSheetData($branchId, $permittedBranchIds);
-        $financialReportData = $this->getFinancialReportData($branchId, $permittedBranchIds, $ytdEnd, $ytdEnd, $ytdStart);
-        $cumulativeProfitLoss = $this->getCumulativeProfitLoss($branchId, $permittedBranchIds, $ytdEnd);
-        $netProfitYtd = $financialReportData['profitLoss'] ?? 0;
-
-        $previousYear = date('Y') - 1;
-        $previousYearEndDate = Carbon::create($previousYear, 12, 31)->toDateString();
-        $previousYearStartDate = Carbon::create($previousYear, 1, 1)->toDateString();
-        $previousYearData = $this->getPreviousYearData($branchId, $permittedBranchIds, $previousYearEndDate, $previousYearStartDate, $previousYearEndDate);
-
-        $totalInventoryValue = 0;
-        $totalInventoryItemsCount = 0;
-        $cards = json_decode($this->dashboardCardsSummary(request())->getContent(), true) ?: [];
-        $totalSalesToday = (float) ($cards['totalSalesToday'] ?? 0);
-        $grossProfitMtd = 0;
-        $totalExpensesToday = (float) ($cards['totalExpensesToday'] ?? 0);
-        $outstandingInvoicesAmount = (float) ($cards['outstandingInvoicesAmount'] ?? 0);
-        $outstandingInvoicesCount = (int) ($cards['outstandingInvoicesCount'] ?? 0);
-        $totalCustomers = (int) ($cards['totalCustomers'] ?? 0);
-        $cashCollectedToday = (float) ($cards['cashCollectedToday'] ?? 0);
-        $revenueThisMonth = (float) ($cards['revenueThisMonth'] ?? 0);
-        $receivablesAging = [
-            'current' => 0,
-            'overdue_1_30' => 0,
-            'overdue_31_60' => 0,
-            'overdue_60_plus' => 0,
-        ];
-            
-        // Branch list for filter dropdown (restricted to user's permitted branches)
-        $branches = Branch::whereIn('id', $permittedBranchIds)
-            ->orderBy('name')
-            ->get();
-
-        // Get pending approvals count
-        $pendingApprovalsCount = \App\Http\Controllers\ApprovalQueueController::getPendingApprovalsCount($user->id);
-
-        Log::info('dashboard.index.completed', [
-            'company_id' => $company->id,
-            'branch_id' => $branchId,
-            'elapsed_ms' => (int) round((microtime(true) - $startedAt) * 1000),
-        ]);
+        $companyId = auth()->user()->company_id;
 
         return view('dashboard', [
-            'balanceSheetData' => $balanceSheetData,
-            'financialReportData' => $financialReportData,
-            'recentJournals' => $recentJournals,
-            'recentPayments' => $recentPayments,
-            'recentReceipts' => $recentReceipts,
-            'previousYearData' => $previousYearData,
-            'cumulativeProfitLoss' => $cumulativeProfitLoss,
-            'totalInventoryValue' => $totalInventoryValue,
-            'totalInventoryItemsCount' => $totalInventoryItemsCount,
-            'totalSalesToday' => $totalSalesToday,
-            'grossProfitMtd' => $grossProfitMtd,
-            'netProfitYtd' => $netProfitYtd,
-            'totalExpensesToday' => $totalExpensesToday,
-            'outstandingInvoicesAmount' => $outstandingInvoicesAmount,
-            'outstandingInvoicesCount' => $outstandingInvoicesCount,
-            'totalCustomers' => $totalCustomers,
-            'cashCollectedToday' => $cashCollectedToday,
-            'pendingApprovalsCount' => $pendingApprovalsCount,
-            'revenueThisMonth' => $revenueThisMonth,
-            'receivablesAging' => $receivablesAging,
-            'branches' => $branches,
-            'selectedBranchId' => $branchId,
+            'idadiYaMaduara' => $companyId ? Duara::forCompany($companyId)->count() : 0,
+            'idadiYaWalipuaji' => $companyId ? Mlipuzi::forCompany($companyId)->count() : 0,
+            'idadiYaVibali' => $companyId ? Kibali::forCompany($companyId)->count() : 0,
         ]);
     }
 
