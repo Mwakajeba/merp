@@ -11,84 +11,59 @@
         <h6 class="mb-0 text-uppercase">DASHIBODI</h6>
         <hr />
 
-        <div class="dashibodi-widgets">
-            <a href="{{ route('milipuko.maduara.index') }}" class="text-decoration-none">
-                <div class="card border-primary dashibodi-card mb-0">
-                    <div class="card-body d-flex align-items-center gap-2">
-                        <i class="bx bx-grid-alt text-primary"></i>
-                        <div>
-                            <div class="idadi text-dark">{{ number_format($idadiYaMaduara) }}</div>
-                            <div class="jina text-primary">Maduara</div>
+        <div class="row row-cols-1 row-cols-lg-3">
+            <div class="col">
+                <a href="{{ route('milipuko.maduara.index') }}" class="text-decoration-none text-body">
+                    <div class="card radius-10">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center">
+                                <div class="flex-grow-1">
+                                    <p class="mb-0">Maduara</p>
+                                    <h4 class="font-weight-bold">{{ number_format($idadiYaMaduara) }}</h4>
+                                </div>
+                                <div class="widgets-icons bg-gradient-blues text-white">
+                                    <i class="bx bx-grid-alt"></i>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                </div>
-            </a>
-
-            <a href="{{ route('milipuko.walipuaji.index') }}" class="text-decoration-none">
-                <div class="card border-warning dashibodi-card mb-0">
-                    <div class="card-body d-flex align-items-center gap-2">
-                        <i class="bx bx-user-check text-warning"></i>
-                        <div>
-                            <div class="idadi text-dark">{{ number_format($idadiYaWalipuaji) }}</div>
-                            <div class="jina text-warning">Walipuaji</div>
+                </a>
+            </div>
+            <div class="col">
+                <a href="{{ route('milipuko.walipuaji.index') }}" class="text-decoration-none text-body">
+                    <div class="card radius-10">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center">
+                                <div class="flex-grow-1">
+                                    <p class="mb-0">Walipuaji</p>
+                                    <h4 class="font-weight-bold">{{ number_format($idadiYaWalipuaji) }}</h4>
+                                </div>
+                                <div class="widgets-icons bg-gradient-kyoto text-white">
+                                    <i class="bx bx-user-check"></i>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                </div>
-            </a>
-
-            <a href="{{ route('milipuko.vibali.index') }}" class="text-decoration-none">
-                <div class="card border-success dashibodi-card mb-0">
-                    <div class="card-body d-flex align-items-center gap-2">
-                        <i class="bx bx-id-card text-success"></i>
-                        <div>
-                            <div class="idadi text-dark">{{ number_format($idadiYaVibali) }}</div>
-                            <div class="jina text-success">Vibali</div>
+                </a>
+            </div>
+            <div class="col">
+                <a href="{{ route('milipuko.vibali.index') }}" class="text-decoration-none text-body">
+                    <div class="card radius-10">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center">
+                                <div class="flex-grow-1">
+                                    <p class="mb-0">Vibali</p>
+                                    <h4 class="font-weight-bold">{{ number_format($idadiYaVibali) }}</h4>
+                                </div>
+                                <div class="widgets-icons bg-gradient-lush text-white">
+                                    <i class="bx bx-id-card"></i>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                </div>
-            </a>
+                </a>
+            </div>
         </div>
     </div>
 </div>
 @endsection
-
-@push('styles')
-<style>
-    .dashibodi-widgets {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 0.75rem;
-    }
-
-    .dashibodi-card {
-        width: 180px;
-        transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
-    }
-
-    .dashibodi-card .card-body {
-        padding: 0.55rem 0.75rem;
-    }
-
-    .dashibodi-card i {
-        font-size: 1.45rem;
-        line-height: 1;
-    }
-
-    .dashibodi-card .idadi {
-        font-size: 1.15rem;
-        font-weight: 700;
-        line-height: 1.1;
-    }
-
-    .dashibodi-card .jina {
-        font-size: 0.78rem;
-        font-weight: 600;
-        line-height: 1.2;
-    }
-
-    .dashibodi-card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-    }
-</style>
-@endpush
