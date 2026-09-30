@@ -12,7 +12,7 @@
         ]" />
 
         <div class="d-flex justify-content-between align-items-center mb-3">
-            <h6 class="mb-0 text-uppercase">WALIPUAJI (BLASTERS)</h6>
+            <h6 class="mb-0 text-uppercase">{{ $hali === 'blocked' ? 'BLASTA WALIOFUNGIWA' : 'WALIPUAJI (BLASTERS)' }}</h6>
             <a href="{{ route('milipuko.walipuaji.create') }}" class="btn btn-warning">
                 <i class="bx bx-plus me-1"></i> Sajili Mlipuaji
             </a>
@@ -70,7 +70,7 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="8" class="text-center text-muted py-4">Hakuna walipuaji waliowekwa bado.</td>
+                                    <td colspan="8" class="text-center text-muted py-4">{{ $hali === 'blocked' ? 'Hakuna blasta waliofungiwa.' : 'Hakuna walipuaji waliowekwa bado.' }}</td>
                                 </tr>
                             @endforelse
                         </tbody>

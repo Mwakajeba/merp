@@ -23,6 +23,7 @@ class Duara extends Model
         'branch_id',
         'namba',
         'maelezo',
+        'hali',
         'created_by',
     ];
 
@@ -62,6 +63,16 @@ class Duara extends Model
     public function scopeForCompany($query, $companyId)
     {
         return $query->where('company_id', $companyId);
+    }
+
+    public function imefungwa(): bool
+    {
+        return $this->hali === 'imefungwa';
+    }
+
+    public function haliLabel(): string
+    {
+        return $this->imefungwa() ? 'Imefungwa' : 'Inafanya kazi';
     }
 
     public function getRouteKey(): string

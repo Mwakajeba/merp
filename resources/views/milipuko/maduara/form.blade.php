@@ -49,7 +49,15 @@
             <label for="namba" class="form-label">Namba ya duara <span class="text-danger">*</span></label>
             <input type="text" name="namba" id="namba" value="{{ old('namba', $duara->namba ?? '') }}" class="form-control" required>
         </div>
-        <div class="col-md-8 mb-3">
+        <div class="col-md-4 mb-3">
+            @php $hali = old('hali', $duara->hali ?? 'inafanya_kazi'); @endphp
+            <label for="hali" class="form-label">Hali <span class="text-danger">*</span></label>
+            <select name="hali" id="hali" class="form-select" required>
+                <option value="inafanya_kazi" @selected($hali === 'inafanya_kazi')>Inafanya kazi</option>
+                <option value="imefungwa" @selected($hali === 'imefungwa')>Imefungwa</option>
+            </select>
+        </div>
+        <div class="col-12 mb-3">
             <label for="maelezo" class="form-label">Maelezo</label>
             <textarea name="maelezo" id="maelezo" class="form-control" rows="2">{{ old('maelezo', $duara->maelezo ?? '') }}</textarea>
         </div>

@@ -19,13 +19,19 @@ class WalipuajiController extends Controller
 {
     public function index()
     {
+        $hali = request('hali');
+        if (! in_array($hali, ['active', 'blocked'], true)) {
+            $hali = null;
+        }
+
         $walipuaji = Mlipuzi::forCompany(auth()->user()->company_id)
+            ->when($hali, fn ($query) => $query->where('hali', $hali))
             ->with('mwenyeBc')
             ->withCount('wawasiliani')
             ->latest()
             ->get();
 
-        return view('milipuko.walipuaji.index', compact('walipuaji'));
+        return view('milipuko.walipuaji.index', compact('walipuaji', 'hali'));
     }
 
     public function create()

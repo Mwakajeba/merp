@@ -28,6 +28,13 @@
         <div class="card mb-4">
             <div class="card-body">
                 <p class="mb-1"><strong>Namba ya duara:</strong> {{ $duara->namba }}</p>
+                <p class="mb-1"><strong>Hali:</strong>
+                    @if($duara->imefungwa())
+                        <span class="badge bg-danger">Imefungwa</span>
+                    @else
+                        <span class="badge bg-success">Inafanya kazi</span>
+                    @endif
+                </p>
                 <p class="mb-0"><strong>Maelezo:</strong> {{ $duara->maelezo ?: '—' }}</p>
             </div>
         </div>

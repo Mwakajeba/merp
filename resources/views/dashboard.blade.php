@@ -63,6 +63,40 @@
                     </div>
                 </a>
             </div>
+            <div class="col">
+                <a href="{{ route('milipuko.maduara.index', ['hali' => 'imefungwa']) }}" class="text-decoration-none text-body">
+                    <div class="card radius-10">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center">
+                                <div class="flex-grow-1">
+                                    <p class="mb-0">Maduara yaliyofungiwa</p>
+                                    <h4 class="font-weight-bold">{{ number_format($idadiYaMaduaraYaliyofungwa) }}</h4>
+                                </div>
+                                <div class="widgets-icons bg-gradient-burning text-white">
+                                    <i class="bx bx-lock-alt"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </a>
+            </div>
+            <div class="col">
+                <a href="{{ route('milipuko.walipuaji.index', ['hali' => 'blocked']) }}" class="text-decoration-none text-body">
+                    <div class="card radius-10">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center">
+                                <div class="flex-grow-1">
+                                    <p class="mb-0">Blasta waliofungiwa</p>
+                                    <h4 class="font-weight-bold">{{ number_format($idadiYaBlastaWaliofungiwa) }}</h4>
+                                </div>
+                                <div class="widgets-icons bg-gradient-moonlit text-white">
+                                    <i class="bx bx-user-x"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </a>
+            </div>
         </div>
     </div>
 </div>

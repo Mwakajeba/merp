@@ -37,6 +37,8 @@ class DashboardController extends Controller
             'idadiYaMaduara' => $companyId ? Duara::forCompany($companyId)->count() : 0,
             'idadiYaWalipuaji' => $companyId ? Mlipuzi::forCompany($companyId)->count() : 0,
             'idadiYaVibali' => $companyId ? Kibali::forCompany($companyId)->count() : 0,
+            'idadiYaMaduaraYaliyofungwa' => $companyId ? Duara::forCompany($companyId)->where('hali', 'imefungwa')->count() : 0,
+            'idadiYaBlastaWaliofungiwa' => $companyId ? Mlipuzi::forCompany($companyId)->where('hali', 'blocked')->count() : 0,
         ]);
     }
 

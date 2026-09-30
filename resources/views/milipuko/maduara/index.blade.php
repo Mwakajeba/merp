@@ -12,7 +12,7 @@
         ]" />
 
         <div class="d-flex justify-content-between align-items-center mb-3">
-            <h6 class="mb-0 text-uppercase">MADUARA</h6>
+            <h6 class="mb-0 text-uppercase">{{ $hali === 'imefungwa' ? 'MADUARA YALIYOFUNGWA' : 'MADUARA' }}</h6>
             <a href="{{ route('milipuko.maduara.create') }}" class="btn btn-primary">
                 <i class="bx bx-plus me-1"></i> Sajili Duara
             </a>
@@ -26,6 +26,7 @@
                         <thead>
                             <tr>
                                 <th>Namba ya duara</th>
+                                <th>Hali</th>
                                 <th>Maelezo</th>
                                 <th>Wasimamizi</th>
                                 <th>Wanachama</th>
@@ -36,6 +37,13 @@
                             @forelse($maduara as $duara)
                                 <tr>
                                     <td>{{ $duara->namba }}</td>
+                                    <td>
+                                        @if($duara->imefungwa())
+                                            <span class="badge bg-danger">Imefungwa</span>
+                                        @else
+                                            <span class="badge bg-success">Inafanya kazi</span>
+                                        @endif
+                                    </td>
                                     <td>{{ $duara->maelezo ?: '—' }}</td>
                                     <td>{{ $duara->wasimamizi_count }}</td>
                                     <td>{{ $duara->wanachama_count }}</td>
@@ -46,7 +54,7 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="5" class="text-center text-muted py-4">Hakuna maduara yaliyosajiliwa bado.</td>
+                                    <td colspan="6" class="text-center text-muted py-4">{{ $hali === 'imefungwa' ? 'Hakuna maduara yaliyofungwa.' : 'Hakuna maduara yaliyosajiliwa bado.' }}</td>
                                 </tr>
                             @endforelse
                         </tbody>

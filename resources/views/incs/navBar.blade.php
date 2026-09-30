@@ -230,9 +230,17 @@
                             ->limit(5)
                             ->get();
                     }
+
+                    $maduaraYaliyofungwa = collect();
+                    if (auth()->check() && auth()->user()->company_id) {
+                        $maduaraYaliyofungwa = \App\Models\Milipuko\Duara::forCompany(auth()->user()->company_id)
+                            ->where('hali', 'imefungwa')
+                            ->orderBy('namba')
+                            ->get();
+                    }
                     @endphp
                     <li class="nav-item dropdown dropdown-large">
-                        <a class="nav-link dropdown-toggle dropdown-toggle-nocaret position-relative" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false"> <span class="alert-count" id="navbarNotificationCount">{{$dueSchedules->count() + $expiringItemsCount}}</span>
+                        <a class="nav-link dropdown-toggle dropdown-toggle-nocaret position-relative" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false"> <span class="alert-count" id="navbarNotificationCount">{{$dueSchedules->count() + $expiringItemsCount + $maduaraYaliyofungwa->count()}}</span>
                             <i class='bx bx-bell'></i>
                         </a>
                         <div class="dropdown-menu dropdown-menu-end">
@@ -275,6 +283,28 @@
                                                 </span>
                                             </h6>
                                             <p class="msg-info">Batch: {{ $item->batch_number }} - Expires: {{ \Carbon\Carbon::parse($item->expiry_date)->format('M d, Y') }}</p>
+                                        </div>
+                                    </div>
+                                </a>
+                                @endforeach
+                                @endif
+
+                                @if($maduaraYaliyofungwa->isNotEmpty())
+                                <div class="dropdown-divider"></div>
+                                <div class="dropdown-header">
+                                    <small class="text-muted">Maduara yaliyofungwa</small>
+                                </div>
+                                @foreach($maduaraYaliyofungwa as $duara)
+                                <a class="dropdown-item" href="{{ route('milipuko.maduara.show', $duara) }}">
+                                    <div class="d-flex align-items-center">
+                                        <div class="notify bg-light-danger text-danger">
+                                            <i class="bx bx-lock-alt"></i>
+                                        </div>
+                                        <div class="flex-grow-1">
+                                            <h6 class="msg-name">{{ $duara->namba }}
+                                                <span class="msg-time float-end">Imefungwa</span>
+                                            </h6>
+                                            <p class="msg-info">{{ $duara->maelezo ?: 'Duara hili limefungwa kufanya kazi.' }}</p>
                                         </div>
                                     </div>
                                 </a>

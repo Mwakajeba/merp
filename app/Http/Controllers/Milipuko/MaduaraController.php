@@ -15,12 +15,18 @@ class MaduaraController extends Controller
 {
     public function index()
     {
+        $hali = request('hali');
+        if (! in_array($hali, ['inafanya_kazi', 'imefungwa'], true)) {
+            $hali = null;
+        }
+
         $maduara = Duara::forCompany(auth()->user()->company_id)
+            ->when($hali, fn ($query) => $query->where('hali', $hali))
             ->withCount(['wasimamizi', 'wanachama'])
             ->latest()
             ->get();
 
-        return view('milipuko.maduara.index', compact('maduara'));
+        return view('milipuko.maduara.index', compact('maduara', 'hali'));
     }
 
     public function create()
@@ -38,6 +44,7 @@ class MaduaraController extends Controller
                 'branch_id' => session('branch_id') ?: auth()->user()->branch_id,
                 'namba' => $data['namba'],
                 'maelezo' => $data['maelezo'],
+                'hali' => $data['hali'],
                 'created_by' => auth()->id(),
             ]);
 
@@ -78,6 +85,7 @@ class MaduaraController extends Controller
             $duara->update([
                 'namba' => $data['namba'],
                 'maelezo' => $data['maelezo'],
+                'hali' => $data['hali'],
             ]);
 
             $this->syncWasimamizi($duara, $data['wasimamizi']);
@@ -118,6 +126,7 @@ class MaduaraController extends Controller
                     ->ignore($duara?->id),
             ],
             'maelezo' => ['nullable', 'string', 'max:2000'],
+            'hali' => ['required', Rule::in(['inafanya_kazi', 'imefungwa'])],
             'wasimamizi' => ['nullable', 'array'],
             'wasimamizi.*.jina' => ['nullable', 'string', 'max:255'],
             'wasimamizi.*.simu' => ['nullable', 'string', 'max:30'],
@@ -126,6 +135,8 @@ class MaduaraController extends Controller
             'wanachama.*.simu' => ['nullable', 'string', 'max:30'],
             'wanachama.*.hisa' => ['nullable', 'numeric', 'min:0'],
         ], [
+            'hali.required' => 'Hali ya duara inahitajika.',
+            'hali.in' => 'Hali ni Inafanya kazi au Imefungwa.',
             'namba.required' => 'Namba ya duara inahitajika.',
             'namba.unique' => 'Namba hii ya duara tayari imesajiliwa.',
             'wanachama.*.hisa.numeric' => 'Hisa lazima iwe namba.',
@@ -143,6 +154,7 @@ class MaduaraController extends Controller
         return [
             'namba' => trim($validated['namba']),
             'maelezo' => isset($validated['maelezo']) ? trim($validated['maelezo']) : null,
+            'hali' => $validated['hali'],
             'wasimamizi' => $wasimamizi,
             'wanachama' => $wanachama,
         ];
