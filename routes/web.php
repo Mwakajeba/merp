@@ -259,6 +259,7 @@ Route::prefix('milipuko/walipuaji')->name('milipuko.walipuaji.')->middleware(['a
 });
 Route::prefix('milipuko/vibali')->name('milipuko.vibali.')->middleware(['auth', 'company.scope', 'require.branch'])->group(function () {
     Route::get('/', [VibaliController::class, 'index'])->name('index');
+    Route::get('/data', [VibaliController::class, 'data'])->name('data');
     Route::get('/create', [VibaliController::class, 'create'])->name('create');
     Route::post('/', [VibaliController::class, 'store'])->name('store');
     Route::get('/{kibali}/chapisha', [VibaliController::class, 'chapisha'])->name('chapisha');

@@ -13,18 +13,98 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use TCPDF2DBarcode;
+use Yajra\DataTables\Facades\DataTables;
 
 class VibaliController extends Controller
 {
     public function index()
     {
-        $vibali = Kibali::forCompany(auth()->user()->company_id)
-            ->with(['duara', 'mlipuzi.mwenyeBc'])
-            ->withCount('wachorongaji')
-            ->latest()
-            ->get();
+        return view('milipuko.vibali.index');
+    }
 
-        return view('milipuko.vibali.index', compact('vibali'));
+    public function data(Request $request)
+    {
+        $query = Kibali::forCompany(auth()->user()->company_id)
+            ->select('vibali.*')
+            ->with(['duara', 'mlipuzi'])
+            ->withCount('wachorongaji');
+
+        return DataTables::eloquent($query)
+            ->editColumn('tarehe', function (Kibali $kibali) {
+                return $kibali->tarehe?->format('d/m/Y') ?? '—';
+            })
+            ->addColumn('duara_namba', function (Kibali $kibali) {
+                return e($kibali->duara->namba ?? '—');
+            })
+            ->addColumn('mlipuzi_jina', function (Kibali $kibali) {
+                return e($kibali->mlipuzi->jina ?? '—');
+            })
+            ->addColumn('hali_onyesho', function (Kibali $kibali) {
+                $rangi = match ($kibali->hali) {
+                    'ufukuziaji' => 'bg-success',
+                    'ufreshiaji' => 'bg-info text-dark',
+                    default => 'bg-primary',
+                };
+                $html = '<span class="badge '.$rangi.'">'.e($kibali->haliLabel()).'</span>';
+                if ($kibali->imefungwa()) {
+                    $html .= ' <span class="badge bg-dark">Closed</span>';
+                }
+
+                return $html;
+            })
+            ->addColumn('vitendo', function (Kibali $kibali) {
+                $html = '<a href="'.e(route('milipuko.vibali.show', $kibali)).'" class="btn btn-sm btn-outline-primary">Angalia</a>';
+                if (! $kibali->imefungwa()) {
+                    $html .= ' <a href="'.e(route('milipuko.vibali.edit', $kibali)).'" class="btn btn-sm btn-outline-warning">Hariri</a>';
+                }
+
+                return $html;
+            })
+            ->filterColumn('tarehe', function ($query, $keyword) {
+                $query->whereRaw("DATE_FORMAT(vibali.tarehe, '%d/%m/%Y') like ?", ['%'.$keyword.'%']);
+            })
+            ->filterColumn('duara_namba', function ($query, $keyword) {
+                $query->whereHas('duara', function ($q) use ($keyword) {
+                    $q->where('namba', 'like', '%'.$keyword.'%');
+                });
+            })
+            ->filterColumn('mlipuzi_jina', function ($query, $keyword) {
+                $query->whereHas('mlipuzi', function ($q) use ($keyword) {
+                    $q->where('jina', 'like', '%'.$keyword.'%');
+                });
+            })
+            ->filterColumn('hali', function ($query, $keyword) {
+                $neno = mb_strtolower($keyword);
+                $query->where(function ($q) use ($keyword, $neno) {
+                    $q->where('vibali.hali', 'like', '%'.$keyword.'%');
+                    foreach (['uzalishaji' => 'uzalishaji', 'ufreshiaji' => 'ufreshiaji', 'ufukuziaji' => 'ufukuziaji'] as $thamani => $lebo) {
+                        if (str_contains($lebo, $neno)) {
+                            $q->orWhere('vibali.hali', $thamani);
+                        }
+                    }
+                    if (str_contains('closed', $neno)) {
+                        $q->orWhereNotNull('vibali.imefungwa_at');
+                    }
+                });
+            })
+            ->orderColumn('duara_namba', function ($query, $order) {
+                $query->orderBy(
+                    Duara::select('namba')->whereColumn('maduara.id', 'vibali.duara_id')->limit(1),
+                    $order
+                );
+            })
+            ->orderColumn('mlipuzi_jina', function ($query, $order) {
+                $query->orderBy(
+                    Mlipuzi::select('jina')->whereColumn('walipuaji.id', 'vibali.mlipuzi_id')->limit(1),
+                    $order
+                );
+            })
+            ->orderColumn('wachorongaji_count', function ($query, $order) {
+                $query->orderBy('wachorongaji_count', $order);
+            })
+            ->rawColumns(['hali_onyesho', 'vitendo'])
+            ->removeColumn('uthibitisho_token', 'duara', 'mlipuzi')
+            ->make(true);
     }
 
     public function create()

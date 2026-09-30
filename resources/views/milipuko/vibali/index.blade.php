@@ -22,7 +22,7 @@
         <div class="card">
             <div class="card-body">
                 <div class="table-responsive">
-                    <table class="table table-striped align-middle">
+                    <table id="vibali-table" class="table table-striped align-middle w-100">
                         <thead>
                             <tr>
                                 <th>Namba</th>
@@ -35,40 +35,7 @@
                                 <th class="text-end">Vitendo</th>
                             </tr>
                         </thead>
-                        <tbody>
-                            @forelse($vibali as $kibali)
-                                <tr>
-                                    <td>{{ $kibali->namba }}</td>
-                                    <td>{{ $kibali->tarehe->format('d/m/Y') }}</td>
-                                    <td>{{ $kibali->duara->namba ?? '—' }}</td>
-                                    <td>{{ $kibali->mlipuzi->jina ?? '—' }}</td>
-                                    <td>
-                                        @if($kibali->hali === 'ufukuziaji')
-                                            <span class="badge bg-success">{{ $kibali->haliLabel() }}</span>
-                                        @elseif($kibali->hali === 'ufreshiaji')
-                                            <span class="badge bg-info text-dark">{{ $kibali->haliLabel() }}</span>
-                                        @else
-                                            <span class="badge bg-primary">{{ $kibali->haliLabel() }}</span>
-                                        @endif
-                                        @if($kibali->imefungwa())
-                                            <span class="badge bg-dark">Closed</span>
-                                        @endif
-                                    </td>
-                                    <td>{{ $kibali->idadi_ya_matundu }}</td>
-                                    <td>{{ $kibali->wachorongaji_count }}</td>
-                                    <td class="text-end">
-                                        <a href="{{ route('milipuko.vibali.show', $kibali) }}" class="btn btn-sm btn-outline-primary">Angalia</a>
-                                        @unless($kibali->imefungwa())
-                                            <a href="{{ route('milipuko.vibali.edit', $kibali) }}" class="btn btn-sm btn-outline-warning">Hariri</a>
-                                        @endunless
-                                    </td>
-                                </tr>
-                            @empty
-                                <tr>
-                                    <td colspan="8" class="text-center text-muted py-4">Hakuna vibali vilivyowekwa bado.</td>
-                                </tr>
-                            @endforelse
-                        </tbody>
+                        <tbody></tbody>
                     </table>
                 </div>
             </div>
@@ -76,3 +43,46 @@
     </div>
 </div>
 @endsection
+
+@push('scripts')
+<script nonce="{{ $cspNonce ?? '' }}">
+    $(function () {
+        $('#vibali-table').DataTable({
+            processing: true,
+            serverSide: true,
+            ajax: {
+                url: @json(route('milipuko.vibali.data')),
+                type: 'GET'
+            },
+            order: [[1, 'desc']],
+            pageLength: 25,
+            columns: [
+                { data: 'namba', name: 'namba' },
+                { data: 'tarehe', name: 'tarehe' },
+                { data: 'duara_namba', name: 'duara_namba' },
+                { data: 'mlipuzi_jina', name: 'mlipuzi_jina' },
+                { data: 'hali_onyesho', name: 'hali', orderable: false },
+                { data: 'idadi_ya_matundu', name: 'idadi_ya_matundu' },
+                { data: 'wachorongaji_count', name: 'wachorongaji_count', searchable: false, defaultContent: '0' },
+                { data: 'vitendo', name: 'vitendo', orderable: false, searchable: false, className: 'text-end' }
+            ],
+            language: {
+                processing: 'Inapakia...',
+                search: 'Tafuta:',
+                lengthMenu: 'Onyesha _MENU_',
+                info: 'Inaonyesha _START_ hadi _END_ kati ya _TOTAL_',
+                infoEmpty: 'Hakuna vibali',
+                infoFiltered: '(zimechujwa kutoka _MAX_)',
+                zeroRecords: 'Hakuna vibali vinavyolingana.',
+                emptyTable: 'Hakuna vibali vilivyowekwa bado.',
+                paginate: {
+                    first: 'Kwanza',
+                    last: 'Mwisho',
+                    next: 'Mbele',
+                    previous: 'Nyuma'
+                }
+            }
+        });
+    });
+</script>
+@endpush
