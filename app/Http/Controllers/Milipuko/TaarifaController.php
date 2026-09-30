@@ -11,19 +11,25 @@ use Illuminate\Validation\Rule;
 
 class TaarifaController extends Controller
 {
+    public function index()
+    {
+        return view('milipuko.taarifa.index');
+    }
+
     public function pdf(Request $request)
     {
         $validated = $request->validate([
             'tarehe' => ['required', 'date'],
-            'hali' => ['required', Rule::in(['uzalishaji', 'ufreshiaji', 'ufukuziaji'])],
+            'hali' => ['required', Rule::in(['zote', 'uzalishaji', 'ufreshiaji', 'ufukuziaji'])],
         ], [
             'tarehe.required' => 'Tarehe inahitajika.',
             'tarehe.date' => 'Tarehe si sahihi.',
             'hali.required' => 'Hali ya mlipuko inahitajika.',
-            'hali.in' => 'Hali ni Uzalishaji, Ufreshiaji au Ufukuziaji.',
+            'hali.in' => 'Hali ni Hali zote, Uzalishaji, Ufreshiaji au Ufukuziaji.',
         ]);
 
         $haliLebo = [
+            'zote' => 'Hali zote',
             'uzalishaji' => 'Uzalishaji',
             'ufreshiaji' => 'Ufreshiaji',
             'ufukuziaji' => 'Ufukuziaji',
@@ -32,7 +38,7 @@ class TaarifaController extends Controller
         $vibali = Kibali::forCompany(auth()->user()->company_id)
             ->with(['duara', 'mlipuzi', 'msimamizi'])
             ->whereDate('tarehe', $validated['tarehe'])
-            ->where('hali', $validated['hali'])
+            ->when($validated['hali'] !== 'zote', fn ($query) => $query->where('hali', $validated['hali']))
             ->get()
             ->sortBy(fn (Kibali $kibali) => sprintf(
                 '%s-%s',

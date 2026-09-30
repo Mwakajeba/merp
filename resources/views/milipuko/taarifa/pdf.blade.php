@@ -81,6 +81,7 @@
             <tr>
                 <th style="width: 40px;">#</th>
                 <th>Duara No.</th>
+                <th>Hali</th>
                 <th>Jina la blasta</th>
                 <th>Jina la msimamizi</th>
             </tr>
@@ -90,12 +91,13 @@
                 <tr>
                     <td>{{ $loop->iteration }}</td>
                     <td>{{ $kibali->duara->namba ?? '—' }}</td>
+                    <td>{{ $kibali->haliLabel() }}</td>
                     <td>{{ $kibali->mlipuzi->jina ?? '—' }}</td>
                     <td>{{ $kibali->msimamizi->jina ?? '—' }}</td>
                 </tr>
             @empty
                 <tr>
-                    <td colspan="4" class="tupu">Hakuna maduara kwa tarehe na hali hii.</td>
+                    <td colspan="5" class="tupu">Hakuna maduara kwa tarehe na hali hii.</td>
                 </tr>
             @endforelse
         </tbody>
