@@ -179,7 +179,7 @@
                                         <div class="welcome-icon">
                                             <i class='bx bx-message-rounded-dots'></i>
                                         </div>
-                                        <h4>Welcome to {{ \App\Services\SystemSettingService::get('app_name', 'SmartAccounting') }} Chat!</h4>
+                                        <h4>Welcome to {{ \App\Services\SystemSettingService::get('app_name', 'M-ERP') }} Chat!</h4>
                                         <p>Select a user from the sidebar to start chatting. You can:</p>
                                         <div class="welcome-features">
                                             <div class="feature-item">

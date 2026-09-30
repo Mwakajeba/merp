@@ -715,7 +715,7 @@ function printOrder() {
             <div class="print-container">
                 <div class="header">
                     <div class="company-info">
-                        <h1 class="company-name">SMARTACCOUNTING</h1>
+                        <h1 class="company-name">M-ERP</h1>
                         <div class="company-details">
                             <div><strong>P.O. Box:</strong> P.O.BOX 00000, City, Country</div>
                             <div><strong>Phone:</strong> +255 000 000 000</div>

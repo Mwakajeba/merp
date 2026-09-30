@@ -1,6 +1,6 @@
 @extends('layouts.auth')
 
-@section('title', 'SmartAccounting – Select Branch')
+@section('title', 'M-ERP – Select Branch')
 
 @section('content')
     <div class="authentication-header"></div>

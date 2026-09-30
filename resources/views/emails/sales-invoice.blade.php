@@ -254,7 +254,7 @@
                     <img src="{{ asset('storage/' . $invoice->company->logo) }}" alt="Logo" style="width: 35px; height: 35px;">
                     @endif
                 </div>
-                <h1 class="company-name">{{ $invoice->company->name ?? 'SMARTACCOUNTING' }}</h1>
+                <h1 class="company-name">{{ $invoice->company->name ?? 'M-ERP' }}</h1>
                 <div class="company-details">
                     <div><strong>P.O. Box:</strong> {{ $invoice->company->address ?? 'P.O.BOX 00000, City, Country' }}</div>
                     <div><strong>Phone:</strong> {{ $invoice->company->phone ?? '+255 000 000 000' }}</div>

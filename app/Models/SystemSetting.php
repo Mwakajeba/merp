@@ -156,7 +156,7 @@ class SystemSetting extends Model
     {
         $defaults = [
             // General Settings
-            'app_name' => ['value' => 'SmartAccounting', 'type' => 'string', 'group' => 'general', 'label' => 'Application Name'],
+            'app_name' => ['value' => 'M-ERP', 'type' => 'string', 'group' => 'general', 'label' => 'Application Name'],
             'app_url' => ['value' => config('app.url'), 'type' => 'string', 'group' => 'general', 'label' => 'Application URL'],
             'timezone' => ['value' => 'Africa/Dar_es_Salaam', 'type' => 'string', 'group' => 'general', 'label' => 'Timezone'],
             'locale' => ['value' => 'sw', 'type' => 'string', 'group' => 'general', 'label' => 'Default Language'],

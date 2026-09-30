@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta charset="utf-8">
-    <title>Statement of Cash Flows - {{ $company->name ?? 'SmartAccounting' }}</title>
+    <title>Statement of Cash Flows - {{ $company->name ?? 'M-ERP' }}</title>
     <style>
         @page {
             margin: 1.5cm 1.5cm;
@@ -165,7 +165,7 @@
 <body>
     <!-- Header -->
     <div class="header">
-        <div class="company-name">{{ $company->name ?? 'SmartAccounting' }}</div>
+        <div class="company-name">{{ $company->name ?? 'M-ERP' }}</div>
         <div class="report-title">Statement of Cash Flows</div>
         <div class="report-period">
             For the period from {{ \Carbon\Carbon::parse($fromDate)->format('F d, Y') }} 
@@ -309,7 +309,7 @@
     <!-- Footer -->
     <div class="footer">
         Generated on {{ now()->format('F d, Y \a\t H:i') }} | 
-        {{ $company->name ?? 'SmartAccounting' }} | 
+        {{ $company->name ?? 'M-ERP' }} | 
         IFRS Compliant Report (IAS 7)
     </div>
 </body>

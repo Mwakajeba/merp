@@ -466,8 +466,8 @@ class CashFlowReportController extends Controller
         // Set document properties
         $methodName = ucfirst($method) . ' Method';
         $spreadsheet->getProperties()
-            ->setCreator($company->name ?? 'SmartAccounting')
-            ->setLastModifiedBy($company->name ?? 'SmartAccounting')
+            ->setCreator($company->name ?? 'M-ERP')
+            ->setLastModifiedBy($company->name ?? 'M-ERP')
             ->setTitle('Statement of Cash Flows (' . $methodName . ')')
             ->setSubject('Cash Flow Statement from ' . Carbon::parse($fromDate)->format('F d, Y') . ' to ' . Carbon::parse($toDate)->format('F d, Y'))
             ->setDescription('IFRS-compliant Statement of Cash Flows generated on ' . now()->format('F d, Y \a\t g:i A'));
@@ -478,7 +478,7 @@ class CashFlowReportController extends Controller
 
         // Set headers
         $row = 1;
-        $worksheet->setCellValue('A' . $row, $company->name ?? 'SmartAccounting');
+        $worksheet->setCellValue('A' . $row, $company->name ?? 'M-ERP');
         $worksheet->mergeCells('A' . $row . ':D' . $row);
         $worksheet->getStyle('A' . $row)->getFont()->setBold(true)->setSize(16);
         $worksheet->getStyle('A' . $row)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);

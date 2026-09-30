@@ -431,8 +431,8 @@ class ChangesEquityReportController extends Controller
         
         // Set document properties
         $spreadsheet->getProperties()
-            ->setCreator($company->name ?? 'SmartAccounting')
-            ->setLastModifiedBy($company->name ?? 'SmartAccounting')
+            ->setCreator($company->name ?? 'M-ERP')
+            ->setLastModifiedBy($company->name ?? 'M-ERP')
             ->setTitle('Statement of Changes in Equity')
             ->setSubject('Statement of Changes in Equity from ' . Carbon::parse($fromDate)->format('F d, Y') . ' to ' . Carbon::parse($toDate)->format('F d, Y'))
             ->setDescription('IFRS-compliant Statement of Changes in Equity generated on ' . now()->format('F d, Y \a\t g:i A'));
@@ -446,7 +446,7 @@ class ChangesEquityReportController extends Controller
         
         // Set headers
         $row = 1;
-        $worksheet->setCellValue('A' . $row, $company->name ?? 'SmartAccounting');
+        $worksheet->setCellValue('A' . $row, $company->name ?? 'M-ERP');
         $lastCol = chr(65 + $numComponents); // A + number of components
         $worksheet->mergeCells('A' . $row . ':' . $lastCol . $row);
         $worksheet->getStyle('A' . $row)->getFont()->setBold(true)->setSize(16);

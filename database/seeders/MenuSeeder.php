@@ -181,5 +181,34 @@ class MenuSeeder extends Seeder
 
             $adminRole->menus()->syncWithoutDetaching($menuIds);
         }
+
+        $milipuko = Menu::updateOrCreate(
+            [
+                'name' => 'Milipuko',
+                'parent_id' => null,
+            ],
+            [
+                'route' => null,
+                'icon' => 'bx bx-bomb',
+            ]
+        );
+
+        $milipukoChild = Menu::updateOrCreate(
+            [
+                'name' => 'Milipuko',
+                'parent_id' => $milipuko->id,
+            ],
+            [
+                'route' => 'milipuko.index',
+                'icon' => 'bx bx-right-arrow-alt',
+            ]
+        );
+
+        $milipukoMenuIds = [$milipuko->id, $milipukoChild->id];
+        $superAdminRole = Role::where('name', 'super-admin')->first();
+        if ($superAdminRole) {
+            $superAdminRole->menus()->syncWithoutDetaching($milipukoMenuIds);
+        }
+        $adminRole->menus()->syncWithoutDetaching($milipukoMenuIds);
     }
 }

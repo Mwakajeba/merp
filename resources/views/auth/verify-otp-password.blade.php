@@ -1,6 +1,6 @@
 @extends('layouts.auth')
 
-@section('title', \App\Services\SystemSettingService::get('app_name', 'SmartAccounting') . ' – Phone Verification')
+@section('title', \App\Services\SystemSettingService::get('app_name', 'M-ERP') . ' – Phone Verification')
 
 @section('content')
     <div class="authentication-header"></div>

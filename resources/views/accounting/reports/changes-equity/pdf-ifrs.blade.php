@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta charset="utf-8">
-    <title>Statement of Changes in Equity - {{ $company->name ?? 'SmartAccounting' }}</title>
+    <title>Statement of Changes in Equity - {{ $company->name ?? 'M-ERP' }}</title>
     <style>
         @page {
             size: A4 landscape;
@@ -156,7 +156,7 @@
 <body>
     <!-- Header -->
     <div class="header">
-        <div class="company-name">{{ $company->name ?? 'SmartAccounting' }}</div>
+        <div class="company-name">{{ $company->name ?? 'M-ERP' }}</div>
         <div class="report-title">Statement of Changes in Equity</div>
         <div class="report-period">
             For the year ended {{ \Carbon\Carbon::parse($toDate)->format('F d, Y') }}
@@ -366,7 +366,7 @@
     <!-- Footer -->
     <div class="footer">
         Generated on {{ now()->format('F d, Y \a\t H:i') }} | 
-        {{ $company->name ?? 'SmartAccounting' }} | 
+        {{ $company->name ?? 'M-ERP' }} | 
         IFRS Compliant Report (IAS 1)
     </div>
 </body>

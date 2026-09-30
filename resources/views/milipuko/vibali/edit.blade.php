@@ -1,0 +1,24 @@
+@extends('layouts.main')
+
+@section('title', 'Hariri Kibali '.$kibali->namba)
+
+@section('content')
+<div class="page-wrapper">
+    <div class="page-content">
+        <x-breadcrumbs-with-icons :links="[
+            ['label' => 'Dashibodi', 'url' => route('dashboard'), 'icon' => 'bx bx-home'],
+            ['label' => 'Milipuko', 'url' => route('milipuko.index'), 'icon' => 'bx bx-bomb'],
+            ['label' => 'Vibali', 'url' => route('milipuko.vibali.index'), 'icon' => 'bx bx-id-card'],
+            ['label' => $kibali->namba, 'url' => route('milipuko.vibali.show', $kibali), 'icon' => 'bx bx-file'],
+            ['label' => 'Hariri', 'url' => '#', 'icon' => 'bx bx-edit']
+        ]" />
+        <h6 class="mb-0 text-uppercase">HARIRI KIBALI {{ $kibali->namba }}</h6>
+        <hr />
+        <div class="card">
+            <div class="card-body">
+                @include('milipuko.vibali.form')
+            </div>
+        </div>
+    </div>
+</div>
+@endsection

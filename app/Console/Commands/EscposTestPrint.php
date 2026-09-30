@@ -28,7 +28,7 @@ class EscposTestPrint extends Command
      */
     public function handle()
     {
-        $message = (string) ($this->argument('message') ?: 'Hello from SMARTACCOUNTING');
+        $message = (string) ($this->argument('message') ?: 'Hello from M-ERP');
         $jobId = (string) Str::uuid();
 
         $escpos = new EscposPrinter();

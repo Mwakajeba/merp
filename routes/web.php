@@ -139,6 +139,11 @@ use App\Http\Controllers\BankAccountController;
 // use App\Http\Controllers\CashDepositController; // Controller missing - commented out
 // use App\Http\Controllers\ProductionBatchController; // Controller missing - commented out
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\MilipukoController;
+use App\Http\Controllers\Milipuko\MaduaraController;
+use App\Http\Controllers\Milipuko\TaarifaController;
+use App\Http\Controllers\Milipuko\VibaliController;
+use App\Http\Controllers\Milipuko\WalipuajiController;
 use App\Http\Controllers\AnalyticsController;
 use App\Http\Controllers\JournalController;
 
@@ -217,6 +222,51 @@ Route::post('/send-email-otp', [OtpEmailController::class, 'sendOtpEmail'])->nam
 Route::get('/global-search', [\App\Http\Controllers\GlobalSearchController::class, 'search'])->middleware(['auth', 'throttle:search'])->name('global-search');
 
 Route::get('/dashboard', [DashboardController::class, 'index'])->middleware(['auth', 'require.branch'])->name('dashboard');
+Route::get('/milipuko', [MilipukoController::class, 'index'])->middleware(['auth', 'require.branch'])->name('milipuko.index');
+Route::get('/milipuko/taarifa', [TaarifaController::class, 'index'])->middleware(['auth', 'company.scope', 'require.branch'])->name('milipuko.taarifa.index');
+Route::get('/milipuko/taarifa/pdf', [TaarifaController::class, 'pdf'])->middleware(['auth', 'company.scope', 'require.branch'])->name('milipuko.taarifa.pdf');
+Route::prefix('milipuko/maduara')->name('milipuko.maduara.')->middleware(['auth', 'company.scope', 'require.branch'])->group(function () {
+    Route::get('/', [MaduaraController::class, 'index'])->name('index');
+    Route::get('/create', [MaduaraController::class, 'create'])->name('create');
+    Route::post('/', [MaduaraController::class, 'store'])->name('store');
+    Route::get('/{duara}', [MaduaraController::class, 'show'])->name('show');
+    Route::get('/{duara}/edit', [MaduaraController::class, 'edit'])->name('edit');
+    Route::put('/{duara}', [MaduaraController::class, 'update'])->name('update');
+    Route::delete('/{duara}', [MaduaraController::class, 'destroy'])->name('destroy');
+});
+Route::get('/thibitisha/mlipuaji/{token}', [WalipuajiController::class, 'thibitisha'])
+    ->middleware('throttle:30,1')
+    ->where('token', '[A-Za-z0-9]+')
+    ->name('milipuko.walipuaji.thibitisha');
+Route::get('/thibitisha/kibali/{token}', [VibaliController::class, 'thibitisha'])
+    ->middleware('throttle:30,1')
+    ->where('token', '[A-Za-z0-9]+')
+    ->name('milipuko.vibali.thibitisha');
+Route::prefix('milipuko/walipuaji')->name('milipuko.walipuaji.')->middleware(['auth', 'company.scope', 'require.branch'])->group(function () {
+    Route::get('/', [WalipuajiController::class, 'index'])->name('index');
+    Route::get('/create', [WalipuajiController::class, 'create'])->name('create');
+    Route::post('/', [WalipuajiController::class, 'store'])->name('store');
+    Route::get('/{mlipuzi}/kitambulisho', [WalipuajiController::class, 'kitambulisho'])->name('kitambulisho');
+    Route::get('/{mlipuzi}/makosa/create', [WalipuajiController::class, 'createKosa'])->name('makosa.create');
+    Route::post('/{mlipuzi}/makosa', [WalipuajiController::class, 'storeKosa'])->name('makosa.store');
+    Route::get('/{mlipuzi}/makosa/{rekodi}/edit', [WalipuajiController::class, 'editKosa'])->name('makosa.edit');
+    Route::put('/{mlipuzi}/makosa/{rekodi}', [WalipuajiController::class, 'updateKosa'])->name('makosa.update');
+    Route::delete('/{mlipuzi}/makosa/{rekodi}', [WalipuajiController::class, 'destroyKosa'])->name('makosa.destroy');
+    Route::get('/{mlipuzi}', [WalipuajiController::class, 'show'])->name('show');
+    Route::get('/{mlipuzi}/edit', [WalipuajiController::class, 'edit'])->name('edit');
+    Route::put('/{mlipuzi}', [WalipuajiController::class, 'update'])->name('update');
+    Route::delete('/{mlipuzi}', [WalipuajiController::class, 'destroy'])->name('destroy');
+});
+Route::prefix('milipuko/vibali')->name('milipuko.vibali.')->middleware(['auth', 'company.scope', 'require.branch'])->group(function () {
+    Route::get('/', [VibaliController::class, 'index'])->name('index');
+    Route::get('/create', [VibaliController::class, 'create'])->name('create');
+    Route::post('/', [VibaliController::class, 'store'])->name('store');
+    Route::get('/{kibali}/chapisha', [VibaliController::class, 'chapisha'])->name('chapisha');
+    Route::get('/{kibali}', [VibaliController::class, 'show'])->name('show');
+    Route::get('/{kibali}/edit', [VibaliController::class, 'edit'])->name('edit');
+    Route::put('/{kibali}', [VibaliController::class, 'update'])->name('update');
+    Route::delete('/{kibali}', [VibaliController::class, 'destroy'])->name('destroy');
+});
 
 // Approval Queue
 Route::get('/approvals/queue', [App\Http\Controllers\ApprovalQueueController::class, 'index'])->middleware(['auth'])->name('approvals.queue');

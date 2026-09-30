@@ -1,6 +1,6 @@
 @extends('layouts.auth')
 
-@section('title', \App\Services\SystemSettingService::get('app_name', 'SmartAccounting') . ' – Subscription Expired')
+@section('title', \App\Services\SystemSettingService::get('app_name', 'M-ERP') . ' – Subscription Expired')
 
 @section('content')
     <div class="authentication-header"></div>

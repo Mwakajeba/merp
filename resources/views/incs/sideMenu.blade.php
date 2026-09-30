@@ -2,7 +2,7 @@
     <div class="sidebar-header">
         <div>
             <!-- <img src="{{ asset('assets/images/logo1.png') }}" width="120" style="color:#fff" alt="logo icon">  -->
-            <h5 style="color:#fff">{{ \App\Services\SystemSettingService::get('app_name', 'SmartAccounting') }}</h5> 
+            <h5 style="color:#fff">{{ \App\Services\SystemSettingService::get('app_name', 'M-ERP') }}</h5> 
         </div>
         <div class="toggle-icon ms-auto"><i class='bx bx-first-page'></i></div>
     </div>

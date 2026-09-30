@@ -405,7 +405,7 @@
             </div>
             @endif
             <div class="header-company-right">
-                <div class="company-name">{{ $invoice->company->name ?? 'SMARTACCOUNTING' }}</div>
+                <div class="company-name">{{ $invoice->company->name ?? 'M-ERP' }}</div>
                 <div class="company-details">
                     <strong>P.O. Box:</strong> {{ $invoice->company->address ?? 'P.O.BOX 00000, City, Country' }}<br>
                     <strong>Phone:</strong> {{ $invoice->company->phone ?? '+255 000 000 000' }}<br>

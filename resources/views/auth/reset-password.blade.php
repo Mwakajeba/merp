@@ -1,6 +1,6 @@
 @extends('layouts.auth')
 
-@section('title', \App\Services\SystemSettingService::get('app_name', 'SmartAccounting') . ' – Reset Password')
+@section('title', \App\Services\SystemSettingService::get('app_name', 'M-ERP') . ' – Reset Password')
 
 @section('content')
     <div class="authentication-header"></div>
