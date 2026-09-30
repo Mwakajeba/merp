@@ -69,7 +69,7 @@
         <div class="row g-3 mb-3">
             <div class="col-md-4">
                 <label for="hali" class="form-label kibali-label">Hali <span class="text-danger">*</span></label>
-                <select name="hali" id="hali" class="form-select" required>
+                <select name="hali" id="hali" class="form-select select2-single" required>
                     <option value="uzalishaji" @selected($hali === 'uzalishaji')>Uzalishaji</option>
                     <option value="ufreshiaji" @selected($hali === 'ufreshiaji')>Ufreshiaji</option>
                     <option value="ufukuziaji" @selected($hali === 'ufukuziaji')>Ufukuziaji</option>
@@ -77,7 +77,7 @@
             </div>
             <div class="col-md-4">
                 <label for="duara_id" class="form-label kibali-label">Duara No. <span class="text-danger">*</span></label>
-                <select name="duara_id" id="duara_id" class="form-select" required>
+                <select name="duara_id" id="duara_id" class="form-select select2-single" required>
                     <option value="">Chagua duara</option>
                     @foreach($maduara as $duara)
                         <option value="{{ $duara->id }}" @selected((string) $duaraId === (string) $duara->id)>{{ $duara->namba }}</option>
@@ -104,7 +104,7 @@
 
         <div class="mb-3">
             <label for="msimamizi_id" class="form-label kibali-label">Jina la msimamizi wa duara <span class="text-danger">*</span></label>
-            <select name="msimamizi_id" id="msimamizi_id" class="form-select" required>
+            <select name="msimamizi_id" id="msimamizi_id" class="form-select select2-single" required>
                 <option value="">Chagua msimamizi</option>
                 @foreach($duaraLililochaguliwa?->wasimamizi ?? [] as $msimamizi)
                     <option value="{{ $msimamizi->id }}" @selected((string) $msimamiziId === (string) $msimamizi->id)>
@@ -119,7 +119,7 @@
 
         <div class="mb-3">
             <label for="mlipuzi_id" class="form-label kibali-label">Jina la mlipuaji (blasta) <span class="text-danger">*</span></label>
-            <select name="mlipuzi_id" id="mlipuzi_id" class="form-select" required>
+            <select name="mlipuzi_id" id="mlipuzi_id" class="form-select select2-single" required>
                 <option value="">Chagua mlipuaji ambaye hajafungwa</option>
                 @foreach($walipuaji as $mtu)
                     @if($mtu->hali === 'blocked' && (string) $mtu->id !== (string) $mlipuziId)
@@ -144,7 +144,7 @@
                 <div class="row g-2 align-items-center mb-2">
                     <div class="col-auto kibali-label" style="width: 2rem;">{{ $nafasi }}.</div>
                     <div class="col">
-                        <select name="wachorongaji[{{ $nafasi }}]" id="mchorongaji-{{ $nafasi }}" class="form-select mchorongaji-select" data-nafasi="{{ $nafasi }}">
+                        <select name="wachorongaji[{{ $nafasi }}]" id="mchorongaji-{{ $nafasi }}" class="form-select select2-single mchorongaji-select" data-nafasi="{{ $nafasi }}">
                             <option value="">Chagua mchorongaji</option>
                             @foreach($walipuaji as $mtu)
                                 @php $ndioHuyu = $aliyechaguliwa === (string) $mtu->id; @endphp
@@ -272,6 +272,24 @@
             });
 
             onyo.hidden = !duara || orodha.length > 0;
+            sasishaSelect2(msimamiziSelect);
+        }
+
+        function sasishaSelect2(select) {
+            if (!window.jQuery) {
+                return;
+            }
+            const $select = window.jQuery(select);
+            if (!$select.hasClass('select2-hidden-accessible')) {
+                return;
+            }
+            $select.select2('destroy');
+            $select.select2({
+                placeholder: 'Chagua msimamizi',
+                allowClear: true,
+                width: '100%',
+                theme: 'bootstrap-5'
+            });
         }
 
         function onyeshaBc() {
