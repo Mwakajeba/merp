@@ -184,7 +184,8 @@
             </div>
             <div class="col-md-6">
                 <label for="katibu" class="form-label kibali-label">Imethibitishwa na katibu <span class="text-danger">*</span></label>
-                <input type="text" name="katibu" id="katibu" value="{{ old('katibu', $kibali->katibu ?? '') }}" class="form-control" required>
+                <input type="text" id="katibu" value="{{ auth()->user()->name }}" class="form-control bg-light" readonly>
+                <div class="form-text">Jina la mtu aliyeingia kwenye mfumo.</div>
             </div>
         </div>
     </div>

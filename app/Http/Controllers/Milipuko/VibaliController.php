@@ -232,7 +232,6 @@ class VibaliController extends Controller
             'wachorongaji.*' => ['nullable', 'integer'],
             'aina_ya_mlipuko' => ['required', Rule::in(['cotex', 'dull_fuse'])],
             'msimamizi_wa_idara' => ['required', 'string', 'max:255'],
-            'katibu' => ['required', 'string', 'max:255'],
         ], [
             'hali.required' => 'Hali ya kibali inahitajika.',
             'hali.in' => 'Hali ni Uzalishaji, Ufreshiaji au Ufukuziaji.',
@@ -245,8 +244,14 @@ class VibaliController extends Controller
             'aina_ya_mlipuko.required' => 'Chagua aina ya mlipuko: COTEX au DULL FUSE.',
             'aina_ya_mlipuko.in' => 'Aina ya mlipuko ni COTEX au DULL FUSE.',
             'msimamizi_wa_idara.required' => 'Jina la msimamizi wa idara linahitajika.',
-            'katibu.required' => 'Jina la katibu linahitajika.',
         ]);
+
+        $katibu = trim((string) auth()->user()->name);
+        if ($katibu === '') {
+            throw ValidationException::withMessages([
+                'katibu' => 'Jina la mtumiaji aliyeingia halipatikani.',
+            ]);
+        }
 
         $companyId = auth()->user()->company_id;
         $duara = Duara::forCompany($companyId)->with('wasimamizi')->find($validated['duara_id']);
@@ -289,7 +294,7 @@ class VibaliController extends Controller
             'mlipuzi_id' => $mlipuzi->id,
             'aina_ya_mlipuko' => $validated['aina_ya_mlipuko'],
             'msimamizi_wa_idara' => trim($validated['msimamizi_wa_idara']),
-            'katibu' => trim($validated['katibu']),
+            'katibu' => $katibu,
             'wachorongaji' => $this->wachorongajiWaliokubaliwa($request, $kibali),
         ];
     }
