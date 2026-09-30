@@ -168,23 +168,11 @@
                     // Removed loan_schedules query - loan functionality not available
                     $dueSchedules = collect([]);
                     
-                    // Get overdue sales invoices
-                    $overdueInvoices = collect([]);
-                    if (auth()->check()) {
-                        $overdueInvoices = \App\Models\Sales\SalesInvoice::with(['customer'])
-                            ->whereHas('customer', function ($query) {
-                                $query->whereHas('branch', function ($q) {
-                                    $q->where('company_id', auth()->user()->company_id);
-                                });
-                            })
-                            ->when(auth()->user()->branch_id, function ($query) {
-                                return $query->where('branch_id', auth()->user()->branch_id);
-                            })
-                            ->where('status', 'sent')
-                            ->where('due_date', '<', $today)
-                            ->where('balance_due', '>', 0)
-                            ->orderBy('due_date', 'asc')
-                            ->limit(10)
+                    $blastaWaliofungiwa = collect();
+                    if (auth()->check() && auth()->user()->company_id) {
+                        $blastaWaliofungiwa = \App\Models\Milipuko\Mlipuzi::forCompany(auth()->user()->company_id)
+                            ->where('hali', 'blocked')
+                            ->orderBy('jina')
                             ->get();
                     }
 
@@ -319,27 +307,27 @@
                         </div>
                     </li>
                     <li class="nav-item dropdown dropdown-large">
-                        <a class="nav-link dropdown-toggle dropdown-toggle-nocaret position-relative" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false"> <span class="alert-count">{{ $overdueInvoices->count() }}</span>
-                            <i class='bx bx-receipt'></i>
+                        <a class="nav-link dropdown-toggle dropdown-toggle-nocaret position-relative" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false"> <span class="alert-count">{{ $blastaWaliofungiwa->count() }}</span>
+                            <i class='bx bx-user-x'></i>
                         </a>
                         <div class="dropdown-menu dropdown-menu-end">
                             <a href="javascript:;">
                                 <div class="msg-header">
-                                    <p class="msg-header-title">Overdue Sales Invoices</p>
-                                    <p class="msg-header-clear ms-auto">Total: {{ number_format($overdueInvoices->sum('balance_due'), 2) }}</p>
+                                    <p class="msg-header-title">Blasta waliofungiwa</p>
+                                    <p class="msg-header-clear ms-auto">Jumla: {{ $blastaWaliofungiwa->count() }}</p>
                                 </div>
                             </a>
                             <div class="header-message-list">
-                                @if($overdueInvoices->count())
-                                    @foreach($overdueInvoices as $invoice)
-                                        <a class="dropdown-item" href="{{ route('sales.invoices.show', $invoice->encoded_id) }}">
+                                @if($blastaWaliofungiwa->isNotEmpty())
+                                    @foreach($blastaWaliofungiwa as $mlipuzi)
+                                        <a class="dropdown-item" href="{{ route('milipuko.walipuaji.show', $mlipuzi) }}">
                                     <div class="d-flex align-items-center">
                                                 <div class="notify bg-light-danger text-danger">
-                                                    <i class="bx bx-receipt"></i>
+                                                    <i class="bx bx-user-x"></i>
                                         </div>
                                         <div class="flex-grow-1">
-                                                    <h6 class="msg-name">{{ $invoice->invoice_number }} <span class="msg-time float-end">{{ \Carbon\Carbon::parse($invoice->due_date)->diffForHumans() }}</span></h6>
-                                                    <p class="msg-info">{{ $invoice->customer->name ?? 'Unknown Customer' }} - {{ number_format($invoice->balance_due, 2) }}</p>
+                                                    <h6 class="msg-name">{{ $mlipuzi->jina }} <span class="msg-time float-end">Blocked</span></h6>
+                                                    <p class="msg-info">{{ $mlipuzi->bc_no ?: 'BC haijawekwa' }}{{ $mlipuzi->simu ? ' · '.$mlipuzi->simu : '' }}</p>
                                         </div>
                                     </div>
                                 </a>
@@ -351,15 +339,15 @@
                                                 <i class="bx bx-check-circle"></i>
                                         </div>
                                         <div class="flex-grow-1">
-                                                <h6 class="msg-name">No overdue invoices</h6>
-                                                <p class="msg-info">All invoices are up to date</p>
+                                                <h6 class="msg-name">Hakuna blasta waliofungiwa</h6>
+                                                <p class="msg-info">Walipuaji wote wako active</p>
                                         </div>
                                     </div>
                                 </a>
                                 @endif
                             </div>
-                            <a href="{{ route('sales.invoices.index') }}">
-                                <div class="text-center msg-footer">View All Sales Invoices</div>
+                            <a href="{{ route('milipuko.walipuaji.index', ['hali' => 'blocked']) }}">
+                                <div class="text-center msg-footer">Angalia blasta wote waliofungiwa</div>
                             </a>
                         </div>
                     </li>
