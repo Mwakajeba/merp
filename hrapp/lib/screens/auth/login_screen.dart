@@ -16,6 +16,8 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
   final _formKey = GlobalKey<FormState>();
   bool _obscurePassword = true;
   bool _isLoading = false;
+  bool _pinMode = true;
+  String _pin = '';
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
@@ -65,6 +67,28 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
       _isLoading = false;
     });
 
+    await _afterLogin(result);
+  }
+
+  Future<void> _submitPin() async {
+    if (_pin.length != 4 || _isLoading) return;
+    setState(() => _isLoading = true);
+    final result = await AuthService.loginWithPin(_pin);
+    if (!mounted) return;
+    setState(() {
+      _isLoading = false;
+      if (result['success'] != true) _pin = '';
+    });
+    await _afterLogin(result);
+  }
+
+  void _addDigit(String digit) {
+    if (_isLoading || _pin.length >= 4) return;
+    setState(() => _pin += digit);
+    if (_pin.length == 4) _submitPin();
+  }
+
+  Future<void> _afterLogin(Map<String, dynamic> result) async {
     if (!mounted) return;
 
     if (result['success'] == true) {
@@ -192,7 +216,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                           ),
                           const SizedBox(height: 24),
                           const Text(
-                            'HR & Payroll',
+                            'Milipuko',
                             style: TextStyle(
                               fontSize: 32,
                               fontWeight: FontWeight.w900,
@@ -388,9 +412,9 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Text(
-                                'Login to Your Account',
-                                style: TextStyle(
+                              Text(
+                                _pinMode ? 'Ingia kwa PIN' : 'Ingia kwa simu',
+                                style: const TextStyle(
                                   fontSize: 28,
                                   fontWeight: FontWeight.w800,
                                   color: Color(0xFF1F2937),
@@ -399,7 +423,9 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                               ),
                               const SizedBox(height: 8),
                               Text(
-                                'Enter your credentials to continue',
+                                _pinMode
+                                    ? 'Weka PIN yako ya tarakimu 4 ili uingie haraka.'
+                                    : 'Weka namba ya simu na nenosiri.',
                                 style: TextStyle(
                                   fontSize: 15,
                                   fontWeight: FontWeight.w500,
@@ -408,6 +434,40 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                               ),
                               const SizedBox(height: 32),
 
+                              if (_pinMode) ...[
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: List.generate(4, (index) {
+                                    final filled = index < _pin.length;
+                                    return Container(
+                                      width: 18,
+                                      height: 18,
+                                      margin: const EdgeInsets.symmetric(horizontal: 10),
+                                      decoration: BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        color: filled ? const Color(0xFF1A4F8B) : Colors.transparent,
+                                        border: Border.all(color: const Color(0xFF1A4F8B), width: 2),
+                                      ),
+                                    );
+                                  }),
+                                ),
+                                const SizedBox(height: 28),
+                                _PinKeypad(
+                                  enabled: !_isLoading,
+                                  onDigit: _addDigit,
+                                  onClear: () => setState(() => _pin = ''),
+                                  onBackspace: () => setState(() {
+                                    if (_pin.isNotEmpty) _pin = _pin.substring(0, _pin.length - 1);
+                                  }),
+                                ),
+                                const SizedBox(height: 16),
+                                Center(
+                                  child: TextButton(
+                                    onPressed: _isLoading ? null : () => setState(() => _pinMode = false),
+                                    child: const Text('Ingia kwa simu na nenosiri'),
+                                  ),
+                                ),
+                              ] else ...[
                               // Phone Number Field
                               _ModernInputField(
                                 controller: _phoneController,
@@ -513,7 +573,21 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                                         ),
                                 ),
                               ),
-                              const SizedBox(height: 32),
+                              const SizedBox(height: 12),
+                              Center(
+                                child: TextButton(
+                                  onPressed: _isLoading
+                                      ? null
+                                      : () => setState(() {
+                                            _pinMode = true;
+                                            _pin = '';
+                                          }),
+                                  child: const Text('Ingia kwa PIN'),
+                                ),
+                              ),
+                              ],
+
+                              const SizedBox(height: 16),
 
                               // Contact Admin
                               Center(
@@ -683,6 +757,58 @@ class _ModernInputFieldState extends State<_ModernInputField> {
             validator: widget.validator,
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _PinKeypad extends StatelessWidget {
+  final bool enabled;
+  final ValueChanged<String> onDigit;
+  final VoidCallback onClear;
+  final VoidCallback onBackspace;
+
+  const _PinKeypad({
+    required this.enabled,
+    required this.onDigit,
+    required this.onClear,
+    required this.onBackspace,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final keys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', 'clear', '0', 'back'];
+    return GridView.count(
+      crossAxisCount: 3,
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      mainAxisSpacing: 12,
+      crossAxisSpacing: 12,
+      childAspectRatio: 1.6,
+      children: keys.map((key) {
+        if (key == 'clear') {
+          return _key(icon: Icons.backspace_outlined, onTap: enabled ? onClear : null);
+        }
+        if (key == 'back') {
+          return _key(icon: Icons.arrow_back, onTap: enabled ? onBackspace : null);
+        }
+        return _key(label: key, onTap: enabled ? () => onDigit(key) : null);
+      }).toList(),
+    );
+  }
+
+  Widget _key({String? label, IconData? icon, VoidCallback? onTap}) {
+    return Material(
+      color: const Color(0xFFF3F6FB),
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: onTap,
+        child: Center(
+          child: icon != null
+              ? Icon(icon, color: const Color(0xFF1A4F8B))
+              : Text(label ?? '', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w700)),
+        ),
       ),
     );
   }

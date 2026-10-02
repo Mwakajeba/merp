@@ -1,22 +1,15 @@
 class ApiConfig {
-  // For local development:
-  // - Android Emulator: Use 'http://10.0.2.2:8000/api'
-  // - Edge/Chrome (Web/Desktop) on Windows: Use 'http://127.0.0.1:8000/api'
-  // - iOS Simulator: Use 'http://localhost:8000/api' or 'http://127.0.0.1:8000/api'
-  // - Physical Device: Use your computer's local IP (e.g., 'http://192.168.1.100:8000/api')
-  //   Find your IP: Windows (ipconfig) or Mac/Linux (ifconfig)
-  
-  // Default to Edge/Web on Windows
-  static const String baseUrl = 'http://127.0.0.1:8000/api';
-  
-  // Alternative URLs (uncomment the one you need):
-  // static const String baseUrl = 'http://10.0.2.2:8000/api';   // Android Emulator
-  // static const String baseUrl = 'http://localhost:8000/api';  // iOS Simulator
-  // static const String baseUrl = 'http://192.168.1.XXX:8000/api';  // Physical device (replace XXX with your IP)
+  static const String baseUrl = 'https://msasa.sys.co.tz/api';
   
   // API Endpoints - Auth
-  static const String login = '/hr/login';
-  static const String logout = '/hr/logout';
+  static const String login = '/milipuko/login';
+  static const String loginPin = '/milipuko/login/pin';
+  static const String logout = '/milipuko/logout';
+  static const String milipukoFomu = '/milipuko/fomu';
+  static const String milipukoVibali = '/milipuko/vibali';
+  static const String milipukoWalipuaji = '/milipuko/walipuaji';
+  static const String milipukoScan = '/milipuko/scan';
+  static const String milipukoTumia = '/milipuko/vibali/tumia';
   static const String me = '/hr/me';
   static const String updateProfile = '/hr/profile';
   static const String changePassword = '/hr/change-password';

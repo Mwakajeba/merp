@@ -1423,5 +1423,12 @@ class RolePermissionSeeder extends Seeder
             'view AI assistant',
         ];
         $accountantRole->syncPermissions($accountantPermissions);
+
+        $verifierRole = Role::firstOrCreate([
+            'name' => 'Verifier',
+            'guard_name' => 'web',
+        ]);
+        $verifierRole->description = 'Askari wa geti na watoa vilipuzi. Wanathibitisha vibali na vitambulisho tu.';
+        $verifierRole->save();
     }
 }

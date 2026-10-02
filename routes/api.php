@@ -54,6 +54,23 @@ Route::prefix('guest')->group(function () {
     });
 });
 
+// Milipuko mobile app (hrapp)
+Route::prefix('milipuko')->group(function () {
+    Route::post('/login', [App\Http\Controllers\Api\MilipukoMobileController::class, 'login']);
+    Route::post('/login/pin', [App\Http\Controllers\Api\MilipukoMobileController::class, 'loginPin']);
+
+    Route::middleware('auth:sanctum')->group(function () {
+        Route::post('/logout', [App\Http\Controllers\Api\MilipukoMobileController::class, 'logout']);
+        Route::get('/me', [App\Http\Controllers\Api\MilipukoMobileController::class, 'me']);
+        Route::get('/fomu', [App\Http\Controllers\Api\MilipukoMobileController::class, 'fomu']);
+        Route::post('/vibali', [App\Http\Controllers\Api\MilipukoMobileController::class, 'storeKibali']);
+        Route::get('/walipuaji', [App\Http\Controllers\Api\MilipukoMobileController::class, 'walipuaji']);
+        Route::post('/walipuaji/{mlipuzi}/picha', [App\Http\Controllers\Api\MilipukoMobileController::class, 'picha']);
+        Route::get('/scan', [App\Http\Controllers\Api\MilipukoMobileController::class, 'scan']);
+        Route::post('/vibali/tumia', [App\Http\Controllers\Api\MilipukoMobileController::class, 'tumia']);
+    });
+});
+
 // SmartPOS Mobile App (Accountant & Admin)
 Route::prefix('smartpos')->group(function () {
     Route::post('/login', [App\Http\Controllers\Api\SmartPosMobileController::class, 'login']);

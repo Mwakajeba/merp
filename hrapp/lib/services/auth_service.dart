@@ -18,13 +18,7 @@ class AuthService {
         errorString.contains('connection refused') ||
         errorString.contains('socketexception') ||
         errorString.contains('network is unreachable')) {
-      return 'Cannot connect to server. Please check:\n'
-          '1. Laravel server is running (php artisan serve)\n'
-          '2. API URL in api_config.dart is correct\n'
-          '3. For Android Emulator: Use http://10.0.2.2:8000/api\n'
-          '4. For iOS Simulator: Use http://localhost:8000/api\n'
-          '5. For Physical Device: Use your computer IP (e.g., http://192.168.1.XXX:8000/api)\n'
-          '   Find your IP: Windows (ipconfig) or Mac/Linux (ifconfig)';
+      return 'Haiwezi kuunganisha na https://msasa.sys.co.tz. Angalia intaneti ya simu.';
     } else if (errorString.contains('timeout')) {
       return 'Connection timeout. Please check your network connection and try again.';
     } else {
@@ -116,48 +110,76 @@ class AuthService {
         },
       );
 
-      if (response.statusCode == 0 || response.body.isEmpty) {
-        return {
-          'success': false,
-          'message': _formatNetworkError('Connection failed'),
-        };
-      }
-
-      Map<String, dynamic> data;
-      try {
-        data = jsonDecode(response.body);
-      } catch (e) {
-        return {
-          'success': false,
-          'message': 'Invalid server response. Please check if the server is running correctly.',
-        };
-      }
-
-      if (response.statusCode == 200 && data['success'] == true) {
-        // Store token and user data
-        await _storage.write(key: _tokenKey, value: data['data']['token']);
-        await _storage.write(
-          key: _userKey,
-          value: jsonEncode(data['data']['user']),
-        );
-
-        return {
-          'success': true,
-          'message': data['message'],
-          'user': data['data']['user'],
-        };
-      } else {
-        return {
-          'success': false,
-          'message': data['message'] ?? 'Login failed',
-        };
-      }
+      return _readLoginResponse(response);
     } catch (e) {
       return {
         'success': false,
         'message': _formatNetworkError(e),
       };
     }
+  }
+
+  static Future<Map<String, dynamic>> loginWithPin(String pin) async {
+    try {
+      final response = await http.post(
+        Uri.parse(ApiConfig.getUrl(ApiConfig.loginPin)),
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: jsonEncode({'pin': pin}),
+      ).timeout(
+        const Duration(seconds: 30),
+        onTimeout: () {
+          throw Exception('Connection timeout. Please check your network and API URL.');
+        },
+      );
+
+      return _readLoginResponse(response);
+    } catch (e) {
+      return {
+        'success': false,
+        'message': _formatNetworkError(e),
+      };
+    }
+  }
+
+  static Future<Map<String, dynamic>> _readLoginResponse(http.Response response) async {
+    if (response.statusCode == 0 || response.body.isEmpty) {
+      return {
+        'success': false,
+        'message': _formatNetworkError('Connection failed'),
+      };
+    }
+
+    Map<String, dynamic> data;
+    try {
+      data = jsonDecode(response.body);
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'Jibu la seva halijasomeka.',
+      };
+    }
+
+    if (response.statusCode == 200 && data['success'] == true) {
+      await _storage.write(key: _tokenKey, value: data['data']['token']);
+      await _storage.write(
+        key: _userKey,
+        value: jsonEncode(data['data']['user']),
+      );
+
+      return {
+        'success': true,
+        'message': data['message'],
+        'user': data['data']['user'],
+      };
+    }
+
+    return {
+      'success': false,
+      'message': data['message'] ?? 'Imeshindikana kuingia',
+    };
   }
 
   // Logout
