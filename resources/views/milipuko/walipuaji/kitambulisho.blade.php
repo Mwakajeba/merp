@@ -63,25 +63,39 @@
             letter-spacing: 0.04em;
         }
         .id-head strong { font-size: 11px; }
+        .id-main {
+            flex: 1;
+            min-height: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 1.5mm 2.4mm 1.5mm;
+        }
         .id-kicker {
-            padding: 1.2mm 3mm 0;
-            font-size: 8px;
-            text-transform: uppercase;
-            letter-spacing: 0.08em;
-            color: #5c6b7a;
+            margin: 0;
+            font-size: 10px;
+            font-weight: 800;
+            letter-spacing: 0.04em;
+            color: #1b2430;
+            text-align: center;
+        }
+        .id-bc {
+            margin: 0.2mm 0 0;
+            font-size: 12px;
+            font-weight: 800;
+            letter-spacing: 0.03em;
+            text-align: center;
         }
         .id-body {
-            flex: 1;
             display: flex;
-            gap: 2.5mm;
-            padding: 1.5mm 3mm 2mm;
-            align-items: center;
+            gap: 1.8mm;
+            align-items: stretch;
         }
         .id-photo {
-            width: 18mm;
+            width: 22mm;
             height: 22mm;
             object-fit: cover;
-            border-radius: 1.5mm;
+            border-radius: 1.2mm;
             background: #d7dee6;
             flex: 0 0 auto;
         }
@@ -91,49 +105,45 @@
             justify-content: center;
             color: #5c6b7a;
             font-size: 8px;
+            text-align: center;
         }
-        .id-meta { flex: 1; min-width: 0; }
-        .id-name {
-            font-size: 13px;
-            font-weight: 700;
-            line-height: 1.15;
-            margin-bottom: 1mm;
+        .id-meta {
+            flex: 1;
+            min-width: 0;
+            height: 22mm;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
         }
         .id-meta p {
             margin: 0;
-            font-size: 8.5px;
-            line-height: 1.35;
+            line-height: 1.05;
         }
-        .badge {
-            display: inline-block;
-            margin-top: 1.2mm;
-            padding: 0.4mm 1.6mm;
-            border-radius: 999px;
-            font-size: 8px;
-            font-weight: 700;
-            color: #fff;
-        }
-        .badge-active { background: #0b6e4f; }
-        .badge-blocked { background: #b42318; }
-        .id-qr { text-align: center; flex: 0 0 auto; }
-        .id-qr img { width: 18mm; height: 18mm; }
-        .id-qr small {
-            display: block;
-            font-size: 6.5px;
+        .kichwa {
+            font-size: 7px;
+            font-weight: 400;
             color: #5c6b7a;
-            margin-top: 0.4mm;
         }
+        .thamani {
+            font-size: 9.5px;
+            font-weight: 800;
+            text-transform: uppercase;
+        }
+        .id-qr { flex: 0 0 auto; }
+        .id-qr img { width: 22mm; height: 22mm; display: block; }
+        .id-barcode { text-align: center; }
+        .id-barcode img { width: 72mm; height: 8mm; object-fit: fill; }
         .id-back {
             align-items: center;
             justify-content: center;
             text-align: center;
             padding: 3mm 4mm;
-            gap: 1.4mm;
+            gap: 1mm;
         }
-        .muhuri {
-            height: 28mm;
-            width: auto;
-            object-fit: contain;
+        .sahihi-mstari {
+            width: 46mm;
+            border-top: 0.35mm solid #1b2430;
+            margin: 3mm 0 1.2mm;
         }
         .id-back p {
             margin: 0;
@@ -143,6 +153,11 @@
         .id-back .tofauti {
             font-size: 8px;
             font-weight: 700;
+        }
+        .katibu {
+            font-size: 8px;
+            font-weight: 700;
+            letter-spacing: 0.06em;
         }
         @page { size: 85.6mm 54mm; margin: 0; }
         @media print {
@@ -163,45 +178,50 @@
         <p class="upande no-print">Mbele</p>
         <article class="id-card">
             <header class="id-head">
-                <strong>{{ $appName }}</strong>
+                <strong>MILIPUKO</strong>
                 <span>{{ $mlipuzi->company->name ?? '' }}</span>
             </header>
-            <div class="id-kicker">Kitambulisho cha Mlipuaji</div>
-            <div class="id-body">
-                @if($mlipuzi->pichaUrl())
-                    <img class="id-photo" src="{{ $mlipuzi->pichaUrl() }}" alt="{{ $mlipuzi->jina }}">
-                @else
-                    <div class="id-photo id-photo-empty">Hakuna picha</div>
-                @endif
-                <div class="id-meta">
-                    <div class="id-name">{{ $mlipuzi->jina }}</div>
-                    <p>BC No. {{ $mlipuzi->bcInayotumika() ?: '—' }}</p>
-                    @if($mlipuzi->aina_ya_bc === 'mtu' && $mlipuzi->mwenyeBc)
-                        <p>Ya {{ $mlipuzi->mwenyeBc->jina }}</p>
+            <div class="id-main">
+                <div>
+                    <p class="id-kicker">KITAMBULISHO CHA MLIPUAJI</p>
+                    @if($bc !== '')
+                        <p class="id-bc">{{ $bc }}</p>
                     @endif
-                    <p>{{ $mlipuzi->simu }}</p>
-                    <p>{{ $mlipuzi->mkoa }}, {{ $mlipuzi->wilaya }}</p>
-                    @if($mlipuzi->hali === 'blocked')
-                        <span class="badge badge-blocked">Blocked</span>
+                </div>
+                <div class="id-body">
+                    @if($mlipuzi->pichaUrl())
+                        <img class="id-photo" src="{{ $mlipuzi->pichaUrl() }}" alt="{{ $mlipuzi->jina }}">
                     @else
-                        <span class="badge badge-active">Active</span>
+                        <div class="id-photo id-photo-empty">Hakuna picha</div>
                     @endif
+                    <div class="id-meta">
+                        <p><span class="kichwa">Jina:</span> <span class="thamani">{{ $mlipuzi->jina }}</span></p>
+                        <p><span class="kichwa">Jinsia:</span> <span class="thamani">ME</span></p>
+                        <p><span class="kichwa">Simu:</span> <span class="thamani">{{ $mlipuzi->simu }}</span></p>
+                        <p><span class="kichwa">Mkoa:</span> <span class="thamani">{{ $mlipuzi->mkoa }}</span></p>
+                        <p><span class="kichwa">Wilaya:</span> <span class="thamani">{{ $mlipuzi->wilaya }}</span></p>
+                    </div>
+                    <div class="id-qr">
+                        <img src="{{ $qr }}" alt="QR ya uthibitisho">
+                    </div>
                 </div>
-                <div class="id-qr">
-                    <img src="{{ $qr }}" alt="QR ya uthibitisho">
-                    <small>Skani kuthibitisha</small>
-                </div>
+                @if($barcode)
+                    <div class="id-barcode">
+                        <img src="{{ $barcode }}" alt="Barcode ya {{ $bc }}">
+                    </div>
+                @endif
             </div>
         </article>
     </div>
     <div class="stage">
         <p class="upande no-print">Nyuma</p>
         <article class="id-card id-back">
-            <img class="muhuri" src="{{ asset('images/muhuri-idara-milipuko.jpg') }}" alt="Muhuri wa Idara ya Milipuko">
             <p class="tofauti">Kimetolewa na Idara ya Milipuko</p>
             <p class="tofauti">Msasa Gold Mine</p>
             <p>S.L.P 02 BUKOMBE, GEITA</p>
             <p>Ukikiokota tafadhali wasiliana nasi kupitia {{ filled($mlipuzi->company?->phone) ? $mlipuzi->company->phone : '—' }}</p>
+            <div class="sahihi-mstari"></div>
+            <p class="katibu">KATIBU WA IDARA</p>
         </article>
     </div>
 </body>

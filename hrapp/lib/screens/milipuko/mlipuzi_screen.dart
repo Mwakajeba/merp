@@ -1,4 +1,8 @@
+import 'dart:math' as math;
+
+import 'package:barcode/barcode.dart';
 import 'package:flutter/material.dart';
+import 'package:qr/qr.dart';
 
 import '../../config/api_config.dart';
 import '../../services/milipuko_service.dart';
@@ -150,7 +154,8 @@ class _KadiMbele extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final amefungwa = mtu['hali'] == 'blocked';
+    final ukaguzi = (mtu['ukaguzi_url'] ?? '').toString();
+    final bc = (mtu['bc_no'] ?? '').toString().trim();
     return AspectRatio(
       aspectRatio: 85.6 / 54,
       child: Container(
@@ -160,49 +165,83 @@ class _KadiMbele extends StatelessWidget {
           children: [
             Container(
               color: const Color(0xFF0B6E4F),
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
               child: Row(
                 children: [
-                  const Text('MILIPUKO', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 12)),
-                  const Spacer(),
-                  Flexible(child: Text((mtu['kampuni'] ?? 'Msasa Gold Mine').toString(), overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontSize: 11))),
+                  const Text('MILIPUKO', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 11)),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      (mtu['kampuni'] ?? 'Msasa Gold Mine').toString(),
+                      textAlign: TextAlign.right,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(color: Colors.white, fontSize: 10),
+                    ),
+                  ),
                 ],
-              ),
-            ),
-            const Align(
-              alignment: Alignment.centerLeft,
-              child: Padding(
-                padding: EdgeInsets.fromLTRB(12, 6, 12, 0),
-                child: Text('KITAMBULISHO CHA MLIPUAJI', style: TextStyle(fontSize: 9, letterSpacing: 0.4, color: Color(0xFF667085))),
               ),
             ),
             Expanded(
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(12, 6, 12, 8),
-                child: Row(
-                  children: [
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(6),
-                      child: picha.isEmpty
-                          ? Container(width: 58, height: 70, color: const Color(0xFFD7DEE6), alignment: Alignment.center, child: const Text('Hakuna\npicha', textAlign: TextAlign.center, style: TextStyle(fontSize: 9)))
-                          : Image.network(picha, width: 58, height: 70, fit: BoxFit.cover),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text((mtu['jina'] ?? '').toString(), maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w800)),
-                          Text('BC No. ${mtu['bc_no'] ?? '—'}', style: const TextStyle(fontSize: 12)),
-                          Text((mtu['simu'] ?? '').toString(), style: const TextStyle(fontSize: 12)),
-                          Text('${mtu['mkoa'] ?? ''}, ${mtu['wilaya'] ?? ''}', style: const TextStyle(fontSize: 12)),
-                          const SizedBox(height: 4),
-                          _Beji(amefungwa: amefungwa),
-                        ],
-                      ),
-                    ),
-                  ],
+                padding: const EdgeInsets.fromLTRB(8, 4, 8, 4),
+                child: LayoutBuilder(
+                  builder: (context, box) {
+                    final upande = math.min(math.max(box.maxHeight - 58, 36).toDouble(), box.maxWidth * 0.26);
+                    return Column(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Column(
+                          children: [
+                            const Text(
+                              'KITAMBULISHO CHA MLIPUAJI',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, letterSpacing: 0.2),
+                            ),
+                            if (bc.isNotEmpty) Text(bc, textAlign: TextAlign.center, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800)),
+                          ],
+                        ),
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(4),
+                              child: picha.isEmpty
+                                  ? Container(
+                                      width: upande,
+                                      height: upande,
+                                      color: const Color(0xFFD7DEE6),
+                                      alignment: Alignment.center,
+                                      child: const Text('Hakuna\npicha', textAlign: TextAlign.center, style: TextStyle(fontSize: 8)),
+                                    )
+                                  : Image.network(picha, width: upande, height: upande, fit: BoxFit.cover),
+                            ),
+                            const SizedBox(width: 6),
+                            Expanded(
+                              child: SizedBox(
+                                height: upande,
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    _MstariKadi('Jina', (mtu['jina'] ?? '').toString()),
+                                    const _MstariKadi('Jinsia', 'ME'),
+                                    _MstariKadi('Simu', (mtu['simu'] ?? '').toString()),
+                                    _MstariKadi('Mkoa', (mtu['mkoa'] ?? '').toString()),
+                                    _MstariKadi('Wilaya', (mtu['wilaya'] ?? '').toString()),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            if (ukaguzi.isNotEmpty) ...[
+                              const SizedBox(width: 6),
+                              _QrNdogo(data: ukaguzi, size: upande),
+                            ],
+                          ],
+                        ),
+                        if (bc.isNotEmpty) _BarcodeNdogo(data: bc) else const SizedBox(height: 22),
+                      ],
+                    );
+                  },
                 ),
               ),
             ),
@@ -211,6 +250,65 @@ class _KadiMbele extends StatelessWidget {
       ),
     );
   }
+}
+
+class _MstariKadi extends StatelessWidget {
+  final String kichwa;
+  final String thamani;
+
+  const _MstariKadi(this.kichwa, this.thamani);
+
+  @override
+  Widget build(BuildContext context) {
+    final andishi = thamani.trim().isEmpty ? '—' : thamani.trim().toUpperCase();
+    return Text.rich(
+      TextSpan(
+        children: [
+          TextSpan(text: '$kichwa: ', style: const TextStyle(fontSize: 8, color: Color(0xFF667085))),
+          TextSpan(text: andishi, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w800)),
+        ],
+      ),
+      maxLines: 2,
+      overflow: TextOverflow.ellipsis,
+    );
+  }
+}
+
+class _QrNdogo extends StatelessWidget {
+  final String data;
+  final double size;
+
+  const _QrNdogo({required this.data, required this.size});
+
+  @override
+  Widget build(BuildContext context) {
+    final code = QrCode.fromData(data: data, errorCorrectLevel: QrErrorCorrectLevel.M);
+    final image = QrImage(code);
+    return CustomPaint(size: Size(size, size), painter: _QrPainter(image));
+  }
+}
+
+class _QrPainter extends CustomPainter {
+  final QrImage image;
+
+  _QrPainter(this.image);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final count = image.moduleCount;
+    final cell = size.width / count;
+    final paint = Paint()..color = const Color(0xFF1B2430);
+    for (var row = 0; row < count; row++) {
+      for (var col = 0; col < count; col++) {
+        if (image.isDark(row, col)) {
+          canvas.drawRect(Rect.fromLTWH(col * cell, row * cell, cell, cell), paint);
+        }
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _QrPainter oldDelegate) => oldDelegate.image != image;
 }
 
 class _KadiNyuma extends StatelessWidget {
@@ -230,18 +328,53 @@ class _KadiNyuma extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Image.asset('assets/muhuri.jpg', height: 72, fit: BoxFit.contain),
-            const SizedBox(height: 4),
             const Text('Kimetolewa na Idara ya Milipuko', textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.w800, fontSize: 12)),
             const Text('Msasa Gold Mine', textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.w800, fontSize: 12)),
             const Text('S.L.P 02 BUKOMBE, GEITA', textAlign: TextAlign.center, style: TextStyle(fontSize: 11)),
             const SizedBox(height: 2),
             Text('Ukikiokota tafadhali wasiliana nasi kupitia $simu', textAlign: TextAlign.center, style: const TextStyle(fontSize: 11)),
+            const SizedBox(height: 10),
+            Container(width: 150, height: 1.2, color: const Color(0xFF1B2430)),
+            const SizedBox(height: 4),
+            const Text('KATIBU WA IDARA', textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.w800, fontSize: 11, letterSpacing: 0.4)),
           ],
         ),
       ),
     );
   }
+}
+
+class _BarcodeNdogo extends StatelessWidget {
+  final String data;
+
+  const _BarcodeNdogo({required this.data});
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(width: double.infinity, height: 26, child: CustomPaint(painter: _BarcodePainter(data)));
+  }
+}
+
+class _BarcodePainter extends CustomPainter {
+  final String data;
+
+  _BarcodePainter(this.data);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final code = data.trim();
+    if (code.isEmpty) return;
+    final bars = Barcode.code128().make(code, width: size.width, height: size.height, drawText: false);
+    final paint = Paint()..color = const Color(0xFF1B2430);
+    for (final bar in bars) {
+      if (bar is BarcodeBar && bar.black) {
+        canvas.drawRect(Rect.fromLTWH(bar.left, bar.top, bar.width, bar.height), paint);
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _BarcodePainter oldDelegate) => oldDelegate.data != data;
 }
 
 class _Beji extends StatelessWidget {

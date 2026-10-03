@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use TCPDF2DBarcode;
+use TCPDFBarcode;
 
 class WalipuajiController extends Controller
 {
@@ -145,11 +146,14 @@ class WalipuajiController extends Controller
     {
         $mlipuzi->load(['company', 'mwenyeBc']);
         $url = $mlipuzi->thibitishoUrl();
+        $bc = trim((string) $mlipuzi->bcInayotumika());
 
         return view('milipuko.walipuaji.kitambulisho', [
             'mlipuzi' => $mlipuzi,
             'thibitishoUrl' => $url,
             'qr' => $this->qrDataUri($url),
+            'bc' => $bc,
+            'barcode' => $bc !== '' ? $this->barcodeDataUri($bc) : null,
             'appName' => SystemSettingService::get('app_name', 'M-ERP'),
         ]);
     }
@@ -497,6 +501,14 @@ class WalipuajiController extends Controller
     {
         $barcode = new TCPDF2DBarcode($url, 'QRCODE,H');
         $png = $barcode->getBarcodePngData(5, 5, [0, 0, 0]);
+
+        return 'data:image/png;base64,'.base64_encode($png);
+    }
+
+    private function barcodeDataUri(string $code): string
+    {
+        $barcode = new TCPDFBarcode($code, 'C128');
+        $png = $barcode->getBarcodePngData(2, 46, [0, 0, 0]);
 
         return 'data:image/png;base64,'.base64_encode($png);
     }
