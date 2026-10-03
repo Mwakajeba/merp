@@ -65,7 +65,10 @@ Route::prefix('milipuko')->group(function () {
         Route::get('/fomu', [App\Http\Controllers\Api\MilipukoMobileController::class, 'fomu']);
         Route::post('/vibali', [App\Http\Controllers\Api\MilipukoMobileController::class, 'storeKibali']);
         Route::post('/mawe', [App\Http\Controllers\Api\MilipukoMobileController::class, 'storeMawe']);
+        Route::get('/mikoa', [App\Http\Controllers\Api\MilipukoMobileController::class, 'mikoa']);
         Route::get('/walipuaji', [App\Http\Controllers\Api\MilipukoMobileController::class, 'walipuaji']);
+        Route::post('/walipuaji', [App\Http\Controllers\Api\MilipukoMobileController::class, 'storeWalipuaji']);
+        Route::get('/walipuaji/{mlipuzi}', [App\Http\Controllers\Api\MilipukoMobileController::class, 'onyeshaWalipuaji']);
         Route::post('/walipuaji/{mlipuzi}/picha', [App\Http\Controllers\Api\MilipukoMobileController::class, 'picha']);
         Route::get('/scan', [App\Http\Controllers\Api\MilipukoMobileController::class, 'scan']);
         Route::post('/vibali/tumia', [App\Http\Controllers\Api\MilipukoMobileController::class, 'tumia']);

@@ -9,6 +9,8 @@ class ApiConfig {
   static const String milipukoVibali = '/milipuko/vibali';
   static const String milipukoMawe = '/milipuko/mawe';
   static const String milipukoWalipuaji = '/milipuko/walipuaji';
+  static const String milipukoMikoa = '/milipuko/mikoa';
+  static String milipukoMlipuzi(int id) => '/milipuko/walipuaji/$id';
   static const String milipukoScan = '/milipuko/scan';
   static const String milipukoTumia = '/milipuko/vibali/tumia';
   static const String me = '/hr/me';

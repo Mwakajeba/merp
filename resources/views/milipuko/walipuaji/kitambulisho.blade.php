@@ -31,8 +31,16 @@
         .toolbar button { background: #0b6e4f; color: #fff; }
         .stage {
             display: flex;
-            justify-content: center;
-            padding: 8px 16px 32px;
+            flex-direction: column;
+            align-items: center;
+            padding: 8px 16px 24px;
+        }
+        .upande {
+            margin: 0 0 6px;
+            font-size: 12px;
+            color: #5c6b7a;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
         }
         .id-card {
             width: 85.6mm;
@@ -115,11 +123,33 @@
             color: #5c6b7a;
             margin-top: 0.4mm;
         }
+        .id-back {
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 3mm 4mm;
+            gap: 1.4mm;
+        }
+        .muhuri {
+            height: 28mm;
+            width: auto;
+            object-fit: contain;
+        }
+        .id-back p {
+            margin: 0;
+            font-size: 7.5px;
+            line-height: 1.25;
+        }
+        .id-back .tofauti {
+            font-size: 8px;
+            font-weight: 700;
+        }
         @page { size: 85.6mm 54mm; margin: 0; }
         @media print {
             body { background: #fff; }
             .no-print { display: none !important; }
-            .stage { padding: 0; }
+            .stage { padding: 0; break-after: page; }
+            .stage:last-child { break-after: auto; }
             .id-card { box-shadow: none; border-radius: 0; }
         }
     </style>
@@ -130,6 +160,7 @@
         <button type="button" onclick="window.print()">Chapisha</button>
     </div>
     <div class="stage">
+        <p class="upande no-print">Mbele</p>
         <article class="id-card">
             <header class="id-head">
                 <strong>{{ $appName }}</strong>
@@ -161,6 +192,16 @@
                     <small>Skani kuthibitisha</small>
                 </div>
             </div>
+        </article>
+    </div>
+    <div class="stage">
+        <p class="upande no-print">Nyuma</p>
+        <article class="id-card id-back">
+            <img class="muhuri" src="{{ asset('images/muhuri-idara-milipuko.jpg') }}" alt="Muhuri wa Idara ya Milipuko">
+            <p class="tofauti">Kimetolewa na Idara ya Milipuko</p>
+            <p class="tofauti">Msasa Gold Mine</p>
+            <p>S.L.P 02 BUKOMBE, GEITA</p>
+            <p>Ukikiokota tafadhali wasiliana nasi kupitia {{ filled($mlipuzi->company?->phone) ? $mlipuzi->company->phone : '—' }}</p>
         </article>
     </div>
 </body>

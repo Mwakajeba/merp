@@ -9,6 +9,7 @@ use App\Models\Milipuko\Duara;
 use App\Models\Milipuko\Kibali;
 use App\Models\Milipuko\KibaliChaMawe;
 use App\Models\Milipuko\Mlipuzi;
+use App\Models\Milipuko\Mwasiliano;
 use App\Models\Milipuko\Msimamizi;
 use App\Models\Milipuko\UzalishajiWaDuara;
 use App\Models\User;
@@ -284,6 +285,17 @@ class MilipukoMobileController extends Controller
         ], 201);
     }
 
+    public function mikoa(): JsonResponse
+    {
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'mikoa' => get_tanzania_regions(),
+                'wilaya' => get_tanzania_districts(),
+            ],
+        ]);
+    }
+
     public function walipuaji(Request $request): JsonResponse
     {
         $this->kataMthibitishaji($request->user());
@@ -298,6 +310,120 @@ class MilipukoMobileController extends Controller
             'success' => true,
             'data' => ['walipuaji' => $walipuaji],
         ]);
+    }
+
+    public function onyeshaWalipuaji(Request $request, int $mlipuzi): JsonResponse
+    {
+        $this->kataMthibitishaji($request->user());
+        $mtu = Mlipuzi::forCompany($request->user()->company_id)
+            ->with(['mwenyeBc', 'wawasiliani', 'company'])
+            ->find($mlipuzi);
+
+        if (! $mtu) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Mlipuaji hajapatikana.',
+            ], 404);
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => ['mlipuzi' => $this->mlipuziKamili($mtu)],
+        ]);
+    }
+
+    public function storeWalipuaji(Request $request): JsonResponse
+    {
+        $this->kataMthibitishaji($request->user());
+        $user = $request->user();
+        $companyId = $user->company_id;
+        $wilayaKwaMkoa = get_tanzania_districts();
+
+        $validated = $request->validate([
+            'jina' => ['required', 'string', 'max:255'],
+            'hali' => ['required', Rule::in(['active', 'blocked'])],
+            'aina_ya_bc' => ['required', Rule::in(['yake', 'mtu'])],
+            'bc_no' => [
+                Rule::requiredIf($request->input('aina_ya_bc') === 'yake'),
+                'nullable',
+                'string',
+                'max:100',
+                Rule::unique('walipuaji', 'bc_no')->where(fn ($query) => $query->where('company_id', $companyId)),
+            ],
+            'bc_ya_mlipuzi_id' => [
+                Rule::requiredIf($request->input('aina_ya_bc') === 'mtu'),
+                'nullable',
+                'integer',
+                Rule::exists('walipuaji', 'id')->where(fn ($query) => $query->where('company_id', $companyId)->where('aina_ya_bc', 'yake')),
+            ],
+            'simu' => ['required', 'string', 'max:30'],
+            'simu_mbadala' => ['nullable', 'string', 'max:30'],
+            'picha' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
+            'mkoa' => ['required', 'string', Rule::in(get_tanzania_regions())],
+            'wilaya' => ['required', 'string', 'max:100'],
+            'eneo' => ['nullable', 'string', 'max:2000'],
+            'mwasiliano_jina' => ['nullable', 'string', 'max:255'],
+            'mwasiliano_simu' => ['nullable', 'string', 'max:30'],
+            'mwasiliano_uhusiano' => ['nullable', 'string', 'max:100'],
+        ], [
+            'jina.required' => 'Jina linahitajika.',
+            'bc_no.required' => 'BC No. inahitajika.',
+            'bc_no.unique' => 'BC No. hii tayari imesajiliwa.',
+            'bc_ya_mlipuzi_id.required' => 'Chagua mwenye BC No.',
+            'simu.required' => 'Simu inahitajika.',
+            'mkoa.required' => 'Chagua mkoa.',
+            'wilaya.required' => 'Chagua wilaya.',
+        ]);
+
+        $wilayaZaMkoa = $wilayaKwaMkoa[$validated['mkoa']] ?? [];
+        if (! in_array($validated['wilaya'], $wilayaZaMkoa, true)) {
+            throw ValidationException::withMessages([
+                'wilaya' => 'Wilaya haipo kwenye mkoa uliochaguliwa.',
+            ]);
+        }
+
+        $jinaLaMwasiliano = trim((string) ($validated['mwasiliano_jina'] ?? ''));
+        $simuYaMwasiliano = trim((string) ($validated['mwasiliano_simu'] ?? ''));
+        $uhusiano = trim((string) ($validated['mwasiliano_uhusiano'] ?? ''));
+        $anaMwasiliano = $jinaLaMwasiliano !== '' || $simuYaMwasiliano !== '' || $uhusiano !== '';
+        if ($anaMwasiliano && ($jinaLaMwasiliano === '' || $simuYaMwasiliano === '' || $uhusiano === '')) {
+            throw ValidationException::withMessages([
+                'mwasiliano_jina' => 'Jina, simu na uhusiano wa mtu wa kuwasiliana navyo vinahitajika.',
+            ]);
+        }
+
+        $anatumiaYake = $validated['aina_ya_bc'] === 'yake';
+        $mtu = Mlipuzi::create([
+            'company_id' => $companyId,
+            'branch_id' => $this->branchId($request, $user),
+            'jina' => trim($validated['jina']),
+            'hali' => $validated['hali'],
+            'aina_ya_bc' => $validated['aina_ya_bc'],
+            'bc_no' => $anatumiaYake ? trim((string) $validated['bc_no']) : null,
+            'bc_ya_mlipuzi_id' => $anatumiaYake ? null : (int) $validated['bc_ya_mlipuzi_id'],
+            'simu' => trim($validated['simu']),
+            'simu_mbadala' => trim((string) ($validated['simu_mbadala'] ?? '')) ?: null,
+            'mkoa' => $validated['mkoa'],
+            'wilaya' => $validated['wilaya'],
+            'eneo' => trim((string) ($validated['eneo'] ?? '')) ?: null,
+            'picha' => $request->file('picha')?->store('walipuaji', 'public'),
+            'created_by' => $user->id,
+        ]);
+
+        if ($anaMwasiliano) {
+            Mwasiliano::create([
+                'mlipuzi_id' => $mtu->id,
+                'jina' => $jinaLaMwasiliano,
+                'simu' => $simuYaMwasiliano,
+                'uhusiano' => $uhusiano,
+            ]);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => $mtu->jina.' amesajiliwa.',
+            'data' => ['mlipuzi' => $this->mlipuziKamili($mtu->load(['mwenyeBc', 'wawasiliani', 'company']))],
+        ], 201);
     }
 
     public function picha(Request $request, int $mlipuzi): JsonResponse
@@ -619,10 +745,32 @@ class MilipukoMobileController extends Controller
             'jina' => $mtu->jina,
             'bc_no' => $mtu->bcInayotumika(),
             'hali' => $mtu->hali,
+            'aina_ya_bc' => $mtu->aina_ya_bc,
             'simu' => $mtu->simu,
             'picha' => $mtu->pichaUrl(),
             'amefungwa' => $mtu->hali === 'blocked',
         ];
+    }
+
+    private function mlipuziKamili(Mlipuzi $mtu): array
+    {
+        return array_merge($this->mlipuziFupi($mtu), [
+            'simu_mbadala' => $mtu->simu_mbadala,
+            'mkoa' => $mtu->mkoa,
+            'wilaya' => $mtu->wilaya,
+            'eneo' => $mtu->eneo,
+            'mwenye_bc' => $mtu->mwenyeBc?->jina,
+            'wawasiliani' => $mtu->relationLoaded('wawasiliani')
+                ? $mtu->wawasiliani->map(fn ($mwasiliano) => [
+                    'jina' => $mwasiliano->jina,
+                    'simu' => $mwasiliano->simu,
+                    'uhusiano' => $mwasiliano->uhusiano,
+                ])->values()
+                : [],
+            'kampuni' => $mtu->company?->name,
+            'simu_ya_kampuni' => $mtu->company?->phone,
+            'ukaguzi_url' => $mtu->thibitishoUrl(),
+        ]);
     }
 
     private function tokenResponse(User $user): JsonResponse

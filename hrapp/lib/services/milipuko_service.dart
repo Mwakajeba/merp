@@ -42,6 +42,23 @@ class MilipukoService {
     return _decode(response);
   }
 
+  static Future<Map<String, dynamic>> postMultipart(
+    String endpoint,
+    Map<String, String> fields, {
+    String? fileField,
+    String? filePath,
+  }) async {
+    final request = http.MultipartRequest('POST', Uri.parse(ApiConfig.getUrl(endpoint)));
+    request.headers.addAll(await _headers(json: false));
+    request.fields.addAll(fields);
+    if (fileField != null && filePath != null && filePath.isNotEmpty) {
+      request.files.add(await http.MultipartFile.fromPath(fileField, filePath));
+    }
+    final streamed = await request.send();
+    final response = await http.Response.fromStream(streamed);
+    return _decode(response);
+  }
+
   static Future<Map<String, dynamic>> uploadPicha(int mlipuziId, String filePath) async {
     final request = http.MultipartRequest(
       'POST',

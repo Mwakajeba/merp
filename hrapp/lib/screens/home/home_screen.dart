@@ -6,6 +6,7 @@ import '../milipuko/kata_kibali_screen.dart';
 import '../milipuko/kata_mawe_screen.dart';
 import '../milipuko/picha_screen.dart';
 import '../milipuko/scan_screen.dart';
+import '../milipuko/walipuaji_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -61,6 +62,14 @@ class _HomeScreenState extends State<HomeScreen> {
           subtitle: 'Mawe au chorongeo',
           color: const Color(0xFFB42318),
           onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const KataMaweScreen())),
+        ),
+      if (!_verifierOnly)
+        _Kitendo(
+          icon: Icons.badge_outlined,
+          title: 'Walipuaji',
+          subtitle: 'Sajili na kitambulisho',
+          color: const Color(0xFF0B6E4F),
+          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const WalipuajiScreen())),
         ),
       if (!_verifierOnly)
         _Kitendo(
