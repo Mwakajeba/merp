@@ -147,9 +147,11 @@ class VibaliController extends Controller
             return $kibali;
         });
 
+        $karatasi = $request->input('karatasi') === '58' ? '58' : '80';
+
         return redirect()
-            ->route('milipuko.vibali.show', $kibali)
-            ->with('success', 'Kibali kimesajiliwa.');
+            ->route('milipuko.vibali.chapisha', ['kibali' => $kibali, 'karatasi' => $karatasi])
+            ->with('success', 'Kibali kimesajiliwa. Chagua printer yako kisha chapisha.');
     }
 
     public function show(Kibali $kibali)
@@ -304,7 +306,9 @@ class VibaliController extends Controller
         $validated = $request->validate([
             'hali' => ['required', Rule::in(['uzalishaji', 'ufreshiaji', 'ufukuziaji'])],
             'duara_id' => ['required', 'integer'],
-            'msimamizi_id' => ['required', 'integer'],
+            'msimamizi_id' => ['nullable', 'integer', 'required_without:msimamizi_jina'],
+            'msimamizi_jina' => ['nullable', 'string', 'max:255', 'required_without:msimamizi_id'],
+            'msimamizi_simu' => ['nullable', 'string', 'max:30', 'required_with:msimamizi_jina'],
             'idadi_ya_matundu' => ['required', 'integer', 'min:0', 'max:100000'],
             'tarehe' => ['required', 'date'],
             'mlipuzi_id' => ['required', 'integer'],
@@ -316,7 +320,9 @@ class VibaliController extends Controller
             'hali.required' => 'Hali ya kibali inahitajika.',
             'hali.in' => 'Hali ni Uzalishaji, Ufreshiaji au Ufukuziaji.',
             'duara_id.required' => 'Duara No. inahitajika.',
-            'msimamizi_id.required' => 'Jina la msimamizi wa duara linahitajika.',
+            'msimamizi_id.required_without' => 'Chagua msimamizi wa duara, au andika jina na simu.',
+            'msimamizi_jina.required_without' => 'Andika jina la msimamizi wa duara.',
+            'msimamizi_simu.required_with' => 'Andika simu ya msimamizi wa duara.',
             'idadi_ya_matundu.required' => 'Idadi ya matundu inahitajika.',
             'idadi_ya_matundu.integer' => 'Idadi ya matundu lazima iwe namba.',
             'tarehe.required' => 'Tarehe inahitajika.',
@@ -342,18 +348,14 @@ class VibaliController extends Controller
             ]);
         }
 
-        $msimamizi = Msimamizi::where('company_id', $companyId)->find($validated['msimamizi_id']);
-        $niMsimamiziWaDuara = $msimamizi && $duara->wasimamizi->contains('id', $msimamizi->id);
-        $niMsimamiziWaKibali = $kibali
-            && $msimamizi
-            && (int) $kibali->duara_id === (int) $duara->id
-            && (int) $kibali->msimamizi_id === (int) $msimamizi->id;
-
-        if (! $niMsimamiziWaDuara && ! $niMsimamiziWaKibali) {
-            throw ValidationException::withMessages([
-                'msimamizi_id' => 'Chagua msimamizi wa duara hili.',
-            ]);
-        }
+        $aliyeko = $kibali && (int) $kibali->duara_id === (int) $duara->id ? (int) $kibali->msimamizi_id : null;
+        $msimamizi = Msimamizi::chaguaAuAndika(
+            $duara,
+            $validated['msimamizi_id'] ?? null,
+            $request->input('msimamizi_jina'),
+            $request->input('msimamizi_simu'),
+            $aliyeko
+        );
 
         $mlipuzi = Mlipuzi::forCompany($companyId)->with('mwenyeBc')->find($validated['mlipuzi_id']);
         $niMlipuziWaKibali = $kibali && $mlipuzi && (int) $kibali->mlipuzi_id === (int) $mlipuzi->id;

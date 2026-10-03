@@ -1,6 +1,6 @@
 @extends('layouts.main')
 
-@section('title', 'Sajili Kibali')
+@section('title', 'Sajili Kibali cha Mawe')
 
 @section('content')
 <div class="page-wrapper">
@@ -8,14 +8,14 @@
         <x-breadcrumbs-with-icons :links="[
             ['label' => 'Dashibodi', 'url' => route('dashboard'), 'icon' => 'bx bx-home'],
             ['label' => 'Milipuko', 'url' => route('milipuko.index'), 'icon' => 'bx bx-bomb'],
-            ['label' => 'Vibali vya milipuko', 'url' => route('milipuko.vibali.index'), 'icon' => 'bx bx-id-card'],
-            ['label' => 'Sajili Kibali', 'url' => '#', 'icon' => 'bx bx-plus']
+            ['label' => 'Vibali vya Mawe', 'url' => route('milipuko.mawe.index'), 'icon' => 'bx bx-package'],
+            ['label' => 'Sajili kibali', 'url' => '#', 'icon' => 'bx bx-plus']
         ]" />
-        <h6 class="mb-0 text-uppercase">SAJILI KIBALI</h6>
+        <h6 class="mb-0 text-uppercase">SAJILI KIBALI CHA MAWE</h6>
         <hr />
         <div class="card">
             <div class="card-body">
-                @include('milipuko.vibali.form')
+                @include('milipuko.mawe.form')
             </div>
         </div>
     </div>

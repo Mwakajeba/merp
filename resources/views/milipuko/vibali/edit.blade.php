@@ -8,7 +8,7 @@
         <x-breadcrumbs-with-icons :links="[
             ['label' => 'Dashibodi', 'url' => route('dashboard'), 'icon' => 'bx bx-home'],
             ['label' => 'Milipuko', 'url' => route('milipuko.index'), 'icon' => 'bx bx-bomb'],
-            ['label' => 'Vibali', 'url' => route('milipuko.vibali.index'), 'icon' => 'bx bx-id-card'],
+            ['label' => 'Vibali vya milipuko', 'url' => route('milipuko.vibali.index'), 'icon' => 'bx bx-id-card'],
             ['label' => $kibali->namba, 'url' => route('milipuko.vibali.show', $kibali), 'icon' => 'bx bx-file'],
             ['label' => 'Hariri', 'url' => '#', 'icon' => 'bx bx-edit']
         ]" />

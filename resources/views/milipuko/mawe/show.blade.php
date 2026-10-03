@@ -1,6 +1,6 @@
 @extends('layouts.main')
 
-@section('title', 'Kibali '.$kibali->namba)
+@section('title', 'Kibali cha mawe '.$kibali->namba)
 
 @section('content')
 <div class="page-wrapper">
@@ -8,19 +8,17 @@
         <x-breadcrumbs-with-icons :links="[
             ['label' => 'Dashibodi', 'url' => route('dashboard'), 'icon' => 'bx bx-home'],
             ['label' => 'Milipuko', 'url' => route('milipuko.index'), 'icon' => 'bx bx-bomb'],
-            ['label' => 'Vibali vya milipuko', 'url' => route('milipuko.vibali.index'), 'icon' => 'bx bx-id-card'],
+            ['label' => 'Vibali vya Mawe', 'url' => route('milipuko.mawe.index'), 'icon' => 'bx bx-package'],
             ['label' => $kibali->namba, 'url' => '#', 'icon' => 'bx bx-file']
         ]" />
 
         <div class="d-flex justify-content-between align-items-center mb-3">
-            <h6 class="mb-0 text-uppercase">KIBALI {{ $kibali->namba }}</h6>
+            <h6 class="mb-0 text-uppercase">KIBALI CHA MAWE {{ $kibali->namba }}</h6>
             <div class="d-flex gap-2">
-                <a href="{{ route('milipuko.vibali.chapisha', [$kibali, 'karatasi' => '58']) }}" class="btn btn-outline-secondary">POS 58mm</a>
-                <a href="{{ route('milipuko.vibali.chapisha', [$kibali, 'karatasi' => '80']) }}" class="btn btn-outline-secondary">POS 80mm</a>
-                @unless($kibali->imefungwa())
-                    <a href="{{ route('milipuko.vibali.edit', $kibali) }}" class="btn btn-warning">Hariri</a>
-                @endunless
-                <form action="{{ route('milipuko.vibali.destroy', $kibali) }}" method="POST" class="d-inline" onsubmit="return confirm('Una uhakika unataka kufuta kibali hiki?');">
+                <a href="{{ route('milipuko.mawe.chapisha', [$kibali, 'karatasi' => '58']) }}" class="btn btn-outline-secondary">POS 58mm</a>
+                <a href="{{ route('milipuko.mawe.chapisha', [$kibali, 'karatasi' => '80']) }}" class="btn btn-outline-secondary">POS 80mm</a>
+                <a href="{{ route('milipuko.mawe.edit', $kibali) }}" class="btn btn-warning">Hariri</a>
+                <form action="{{ route('milipuko.mawe.destroy', $kibali) }}" method="POST" class="d-inline" onsubmit="return confirm('Una uhakika unataka kufuta kibali hiki?');">
                     @csrf
                     @method('DELETE')
                     <button type="submit" class="btn btn-danger">Futa</button>
@@ -39,37 +37,17 @@
                             @if(filled($kibali->company->address ?? null))
                                 <div class="kibali-anuani">{{ $kibali->company->address }}</div>
                             @endif
-                            <div class="kibali-kichwa">KIBALI CHA KUCHORONGA MWAMBA NA KULIPUA</div>
+                            <div class="kibali-kichwa">KIBALI CHA KUSAFIRISHA MZIGO KUTOKA MADUARANI KWENDA OFISINI</div>
                         </div>
                         <div class="kibali-namba">{{ $kibali->namba }}</div>
                     </div>
 
-                    <p class="mb-2"><span class="kibali-label">Hali:</span> {{ $kibali->haliLabel() }}
-                        @if($kibali->imefungwa())
-                            <span class="badge bg-dark">Closed</span>
-                            <span class="text-muted">{{ $kibali->imefungwa_at->format('d/m/Y H:i') }}. Hakitumiki tena.</span>
-                        @endif
-                    </p>
                     <p class="mb-2"><span class="kibali-label">Duara No.:</span> {{ $kibali->duara->namba ?? '—' }}</p>
-                    <p class="mb-2"><span class="kibali-label">Idadi ya matundu:</span> {{ $kibali->idadi_ya_matundu }}</p>
-                    <p class="mb-2"><span class="kibali-label">BC No.:</span> {{ $kibali->bc_no ?: '—' }}</p>
-                    <p class="mb-2"><span class="kibali-label">Tarehe:</span> {{ $kibali->tarehe->format('d/m/Y') }}</p>
+                    <p class="mb-2"><span class="kibali-label">Idadi ya mifuko:</span> {{ $kibali->idadi_ya_mifuko }}</p>
+                    <p class="mb-2"><span class="kibali-label">Aina ya mzigo:</span> {{ $kibali->ainaLabel() }}</p>
                     <p class="mb-2"><span class="kibali-label">Jina la msimamizi wa duara:</span> {{ $kibali->msimamizi->jina ?? '—' }}</p>
-                    <p class="mb-2"><span class="kibali-label">Jina la mlipuaji (blasta):</span> {{ $kibali->mlipuzi->jina ?? '—' }}</p>
-
-                    <div class="kibali-label mb-1">Majina ya wachorongaji</div>
-                    <ol class="mb-3">
-                        @foreach($kibali->wachorongajiKwaNafasi() as $mtu)
-                            <li>{{ $mtu->jina ?? '—' }}</li>
-                        @endforeach
-                    </ol>
-
-                    <p class="mb-2 d-flex flex-wrap align-items-center gap-2">
-                        <span class="kibali-label">Aina ya mlipuko:</span>
-                        @include('milipuko.vibali._aina')
-                    </p>
-                    <p class="mb-2"><span class="kibali-label">Msimamizi wa idara (inspector):</span> {{ $kibali->msimamizi_wa_idara }}</p>
-                    <p class="mb-3"><span class="kibali-label">Imethibitishwa na katibu:</span> {{ $kibali->katibu }}</p>
+                    <p class="mb-2"><span class="kibali-label">Jina la katibu wa idara:</span> {{ $kibali->katibu }}</p>
+                    <p class="mb-3"><span class="kibali-label">Tarehe:</span> {{ $kibali->tarehe->format('d/m/Y') }}</p>
                     <div class="text-center">
                         <img src="{{ $qr }}" alt="QR ya ukaguzi" width="120" height="120">
                         <div class="small kibali-label">Skani kwa ukaguzi</div>

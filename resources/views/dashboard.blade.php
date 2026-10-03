@@ -52,7 +52,7 @@
                         <div class="card-body">
                             <div class="d-flex align-items-center">
                                 <div class="flex-grow-1">
-                                    <p class="mb-0">Vibali</p>
+                                    <p class="mb-0">Vibali vya milipuko</p>
                                     <h4 class="font-weight-bold">{{ number_format($idadiYaVibali) }}</h4>
                                 </div>
                                 <div class="widgets-icons bg-gradient-lush text-white">

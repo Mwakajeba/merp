@@ -7,6 +7,7 @@ class ApiConfig {
   static const String logout = '/milipuko/logout';
   static const String milipukoFomu = '/milipuko/fomu';
   static const String milipukoVibali = '/milipuko/vibali';
+  static const String milipukoMawe = '/milipuko/mawe';
   static const String milipukoWalipuaji = '/milipuko/walipuaji';
   static const String milipukoScan = '/milipuko/scan';
   static const String milipukoTumia = '/milipuko/vibali/tumia';

@@ -4,30 +4,24 @@ import '../../config/api_config.dart';
 import '../../services/milipuko_service.dart';
 import 'risiti.dart';
 
-class KataKibaliScreen extends StatefulWidget {
-  const KataKibaliScreen({super.key});
+class KataMaweScreen extends StatefulWidget {
+  const KataMaweScreen({super.key});
 
   @override
-  State<KataKibaliScreen> createState() => _KataKibaliScreenState();
+  State<KataMaweScreen> createState() => _KataMaweScreenState();
 }
 
-class _KataKibaliScreenState extends State<KataKibaliScreen> {
+class _KataMaweScreenState extends State<KataMaweScreen> {
   bool _loading = true;
   bool _saving = false;
   String? _error;
   String _katibu = '';
-  List<Map<String, dynamic>> _maduara = [];
-  List<Map<String, dynamic>> _walipuaji = [];
-
-  String _hali = 'uzalishaji';
-  String _aina = 'cotex';
   String _karatasi = '80';
+  String _aina = 'mawe';
+  List<Map<String, dynamic>> _maduara = [];
   Map<String, dynamic>? _duara;
   Map<String, dynamic>? _msimamizi;
-  Map<String, dynamic>? _mlipuzi;
-  final List<Map<String, dynamic>?> _wachorongaji = List.filled(5, null);
-  final _matundu = TextEditingController();
-  final _idara = TextEditingController();
+  final _mifuko = TextEditingController(text: '1');
   final _msimamiziJina = TextEditingController();
   final _msimamiziSimu = TextEditingController();
   DateTime _tarehe = DateTime.now();
@@ -40,23 +34,28 @@ class _KataKibaliScreenState extends State<KataKibaliScreen> {
 
   @override
   void dispose() {
-    _matundu.dispose();
-    _idara.dispose();
+    _mifuko.dispose();
     _msimamiziJina.dispose();
     _msimamiziSimu.dispose();
     super.dispose();
   }
 
-  Future<void> _load() async {
-    final result = await MilipukoService.get(ApiConfig.milipukoFomu);
+  String get _tareheIso => '${_tarehe.year.toString().padLeft(4, '0')}-${_tarehe.month.toString().padLeft(2, '0')}-${_tarehe.day.toString().padLeft(2, '0')}';
+
+  Future<void> _load({bool wekaUpyaDuara = false}) async {
+    final result = await MilipukoService.get('${ApiConfig.milipukoFomu}?tarehe=${Uri.encodeQueryComponent(_tareheIso)}');
     if (!mounted) return;
     final data = result['data'] as Map<String, dynamic>? ?? {};
+    final maduara = ((data['maduara'] as List?) ?? []).cast<Map<String, dynamic>>();
     setState(() {
       _loading = false;
       _error = result['success'] == true ? null : (result['message'] ?? 'Imeshindikana kupakia fomu.').toString();
       _katibu = (data['katibu'] ?? '').toString();
-      _maduara = ((data['maduara'] as List?) ?? []).cast<Map<String, dynamic>>();
-      _walipuaji = ((data['walipuaji'] as List?) ?? []).cast<Map<String, dynamic>>();
+      _maduara = maduara;
+      if (wekaUpyaDuara || !maduara.any((duara) => duara['id'] == _duara?['id'])) {
+        _duara = null;
+        _msimamizi = null;
+      }
     });
   }
 
@@ -105,32 +104,29 @@ class _KataKibaliScreenState extends State<KataKibaliScreen> {
   }
 
   Future<void> _hifadhi() async {
+    final mifuko = int.tryParse(_mifuko.text.trim()) ?? 0;
     final andikaMsimamizi = _duara != null && _wasimamizi.isEmpty;
-    if (_duara == null || _mlipuzi == null || _matundu.text.trim().isEmpty || _idara.text.trim().isEmpty || (andikaMsimamizi ? (_msimamiziJina.text.trim().isEmpty || _msimamiziSimu.text.trim().isEmpty) : _msimamizi == null)) {
-      _onyesha('Jaza duara, msimamizi, mlipuaji, matundu na msimamizi wa idara.');
+    if (_duara == null || mifuko < 1 || (andikaMsimamizi ? (_msimamiziJina.text.trim().isEmpty || _msimamiziSimu.text.trim().isEmpty) : _msimamizi == null)) {
+      _onyesha('Jaza duara, msimamizi na idadi ya mifuko.');
       return;
     }
     setState(() => _saving = true);
-    final result = await MilipukoService.post(ApiConfig.milipukoVibali, {
-      'hali': _hali,
+    final result = await MilipukoService.post(ApiConfig.milipukoMawe, {
       'duara_id': _duara!['id'],
       if (andikaMsimamizi) 'msimamizi_jina': _msimamiziJina.text.trim(),
       if (andikaMsimamizi) 'msimamizi_simu': _msimamiziSimu.text.trim(),
       if (!andikaMsimamizi) 'msimamizi_id': _msimamizi!['id'],
-      'mlipuzi_id': _mlipuzi!['id'],
-      'idadi_ya_matundu': int.tryParse(_matundu.text.trim()) ?? 0,
-      'tarehe': '${_tarehe.year.toString().padLeft(4, '0')}-${_tarehe.month.toString().padLeft(2, '0')}-${_tarehe.day.toString().padLeft(2, '0')}',
-      'aina_ya_mlipuko': _aina,
-      'msimamizi_wa_idara': _idara.text.trim(),
-      'wachorongaji': _wachorongaji.whereType<Map<String, dynamic>>().map((m) => m['id']).toList(),
+      'idadi_ya_mifuko': mifuko,
+      'aina_ya_mzigo': _aina,
+      'tarehe': _tareheIso,
     });
     if (!mounted) return;
     setState(() => _saving = false);
     _onyesha((result['message'] ?? 'Imeshindikana.').toString());
     if (result['success'] == true) {
-      final kibali = (result['data'] as Map?)?['kibali'];
-      if (kibali is Map) {
-        await chapishaKibaliChaMlipuko(Map<String, dynamic>.from(kibali), _karatasi);
+      final mawe = (result['data'] as Map?)?['mawe'];
+      if (mawe is Map) {
+        await chapishaKibaliChaMawe(Map<String, dynamic>.from(mawe), _karatasi);
       }
       if (mounted) Navigator.pop(context);
     }
@@ -143,7 +139,7 @@ class _KataKibaliScreenState extends State<KataKibaliScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Kata kibali'), backgroundColor: const Color(0xFF1A4F8B), foregroundColor: Colors.white),
+      appBar: AppBar(title: const Text('Kata kibali cha mawe'), backgroundColor: const Color(0xFF1A4F8B), foregroundColor: Colors.white),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _error != null
@@ -151,18 +147,22 @@ class _KataKibaliScreenState extends State<KataKibaliScreen> {
               : ListView(
                   padding: const EdgeInsets.all(16),
                   children: [
-                    DropdownButtonFormField<String>(
-                      initialValue: _hali,
-                      decoration: const InputDecoration(labelText: 'Hali'),
-                      items: const [
-                        DropdownMenuItem(value: 'uzalishaji', child: Text('Uzalishaji')),
-                        DropdownMenuItem(value: 'ufreshiaji', child: Text('Ufreshiaji')),
-                        DropdownMenuItem(value: 'ufukuziaji', child: Text('Ufukuziaji')),
+                    const Text('Aina ya mzigo', style: TextStyle(fontWeight: FontWeight.w700)),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Expanded(child: _PrinterMawe(label: 'Mawe', selected: _aina == 'mawe', onTap: () => setState(() => _aina = 'mawe'))),
+                        const SizedBox(width: 10),
+                        Expanded(child: _PrinterMawe(label: 'Chorongeo', selected: _aina == 'chorongeo', onTap: () => setState(() => _aina = 'chorongeo'))),
                       ],
-                      onChanged: (value) => setState(() => _hali = value ?? 'uzalishaji'),
                     ),
+                    if (_maduara.isEmpty)
+                      const Padding(
+                        padding: EdgeInsets.only(top: 12),
+                        child: Text('Hakuna duara lililosajiliwa kuwa limezalisha tarehe hii.'),
+                      ),
                     const SizedBox(height: 12),
-                    _Chaguo(
+                    _ChaguoMawe(
                       label: 'Duara No.',
                       value: _duara?['namba']?.toString(),
                       onTap: () async {
@@ -182,7 +182,7 @@ class _KataKibaliScreenState extends State<KataKibaliScreen> {
                       const SizedBox(height: 8),
                       TextFormField(controller: _msimamiziSimu, keyboardType: TextInputType.phone, decoration: const InputDecoration(labelText: 'Simu ya msimamizi')),
                     ] else
-                      _Chaguo(
+                      _ChaguoMawe(
                         label: 'Msimamizi wa duara',
                         value: _msimamizi == null ? null : '${_msimamizi!['jina']} (${_msimamizi!['simu'] ?? ''})',
                         onTap: () async {
@@ -191,23 +191,11 @@ class _KataKibaliScreenState extends State<KataKibaliScreen> {
                         },
                       ),
                     const SizedBox(height: 12),
-                    _Chaguo(
-                      label: 'Mlipuaji (blasta)',
-                      value: _mlipuzi == null ? null : '${_mlipuzi!['jina']} — ${_mlipuzi!['bc_no'] ?? ''}',
-                      onTap: () async {
-                        final item = await _chagua('Tafuta mlipuaji', _walipuaji, (m) => '${m['jina']} ${m['bc_no'] ?? ''}');
-                        if (item != null) setState(() => _mlipuzi = item);
-                      },
-                    ),
-                    const SizedBox(height: 8),
-                    Text('BC No.: ${_mlipuzi?['bc_no'] ?? '—'}'),
-                    const SizedBox(height: 12),
                     TextFormField(
-                      controller: _matundu,
+                      controller: _mifuko,
                       keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(labelText: 'Idadi ya matundu'),
+                      decoration: const InputDecoration(labelText: 'Idadi ya mifuko'),
                     ),
-                    const SizedBox(height: 12),
                     ListTile(
                       contentPadding: EdgeInsets.zero,
                       title: const Text('Tarehe'),
@@ -215,30 +203,14 @@ class _KataKibaliScreenState extends State<KataKibaliScreen> {
                       trailing: const Icon(Icons.calendar_today),
                       onTap: () async {
                         final picked = await showDatePicker(context: context, firstDate: DateTime(2020), lastDate: DateTime(2100), initialDate: _tarehe);
-                        if (picked != null) setState(() => _tarehe = picked);
+                        if (picked != null) {
+                          setState(() => _tarehe = picked);
+                          _load(wekaUpyaDuara: true);
+                        }
                       },
                     ),
-                    const Text('Wachorongaji (si lazima)', style: TextStyle(fontWeight: FontWeight.w700)),
-                    for (var i = 0; i < 5; i++)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 8),
-                        child: _Chaguo(
-                          label: 'Mchorongaji ${i + 1}',
-                          value: _wachorongaji[i] == null ? null : _wachorongaji[i]!['jina']?.toString(),
-                          onTap: () async {
-                            final item = await _chagua('Tafuta mchorongaji', _walipuaji, (m) => '${m['jina']} ${m['bc_no'] ?? ''}');
-                            if (item != null) setState(() => _wachorongaji[i] = item);
-                          },
-                        ),
-                      ),
-                    const SizedBox(height: 12),
-                    const Text('Aina ya mlipuko', style: TextStyle(fontWeight: FontWeight.w700)),
-                    RadioListTile<String>(value: 'cotex', groupValue: _aina, title: const Text('COTEX'), onChanged: (v) => setState(() => _aina = v!)),
-                    RadioListTile<String>(value: 'dull_fuse', groupValue: _aina, title: const Text('DULL FUSE'), onChanged: (v) => setState(() => _aina = v!)),
-                    TextFormField(controller: _idara, decoration: const InputDecoration(labelText: 'Msimamizi wa idara')),
-                    const SizedBox(height: 12),
                     InputDecorator(
-                      decoration: const InputDecoration(labelText: 'Imethibitishwa na katibu'),
+                      decoration: const InputDecoration(labelText: 'Katibu'),
                       child: Text(_katibu.isEmpty ? '—' : _katibu),
                     ),
                     const SizedBox(height: 16),
@@ -246,9 +218,9 @@ class _KataKibaliScreenState extends State<KataKibaliScreen> {
                     const SizedBox(height: 8),
                     Row(
                       children: [
-                        Expanded(child: _PrinterChip(label: 'POS 58mm', selected: _karatasi == '58', onTap: () => setState(() => _karatasi = '58'))),
+                        Expanded(child: _PrinterMawe(label: 'POS 58mm', selected: _karatasi == '58', onTap: () => setState(() => _karatasi = '58'))),
                         const SizedBox(width: 10),
-                        Expanded(child: _PrinterChip(label: 'POS 80mm', selected: _karatasi == '80', onTap: () => setState(() => _karatasi = '80'))),
+                        Expanded(child: _PrinterMawe(label: 'POS 80mm', selected: _karatasi == '80', onTap: () => setState(() => _karatasi = '80'))),
                       ],
                     ),
                     const SizedBox(height: 20),
@@ -262,12 +234,12 @@ class _KataKibaliScreenState extends State<KataKibaliScreen> {
   }
 }
 
-class _PrinterChip extends StatelessWidget {
+class _PrinterMawe extends StatelessWidget {
   final String label;
   final bool selected;
   final VoidCallback onTap;
 
-  const _PrinterChip({required this.label, required this.selected, required this.onTap});
+  const _PrinterMawe({required this.label, required this.selected, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -291,12 +263,12 @@ class _PrinterChip extends StatelessWidget {
   }
 }
 
-class _Chaguo extends StatelessWidget {
+class _ChaguoMawe extends StatelessWidget {
   final String label;
   final String? value;
   final VoidCallback onTap;
 
-  const _Chaguo({required this.label, required this.value, required this.onTap});
+  const _ChaguoMawe({required this.label, required this.value, required this.onTap});
 
   @override
   Widget build(BuildContext context) {

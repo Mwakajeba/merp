@@ -6,7 +6,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Kibali {{ $kibali->namba }}</title>
+    <title>Kibali cha mawe {{ $kibali->namba }}</title>
     <style>
         * { box-sizing: border-box; }
         body {
@@ -47,25 +47,18 @@
         .ukaguzi { margin: 4mm auto 0; color: #111; line-height: 1.2; }
         .ukaguzi img { display: block; margin: 0 auto 1mm; }
         .ukaguzi small { display: block; color: #1a4f8b; font-weight: 700; }
-        .namba { font-weight: 700; color: #111; letter-spacing: 0.06em; }
+        .namba { font-weight: 700; color: #111; letter-spacing: 0.06em; margin: 2mm 0; }
         .ofisi { color: #c0392b; font-weight: 700; letter-spacing: 0.04em; }
         .kampuni, .anuani, .jina-kibali { font-weight: 700; }
         .jina-kibali { color: #9b2d6b; margin: 1.5mm 0 2mm; line-height: 1.3; }
-        .mstari { margin: 2.2mm 0; font-weight: 700; line-height: 1.35; }
+        .mstari { margin: 2.4mm 0; font-weight: 700; line-height: 1.35; }
         .mstari .thamani { font-weight: 500; color: #111; }
         .sahihi {
-            margin-top: 1.5mm;
-            font-weight: 700;
-        }
-        .sahihi span {
             display: block;
             border-bottom: 1px dotted #1a4f8b;
-            height: 6mm;
+            height: 7mm;
+            margin-top: 1mm;
         }
-        .orodha { margin: 1mm 0 2mm; padding: 0; list-style: none; }
-        .orodha li { margin: 2mm 0; font-weight: 700; }
-        .aina { display: flex; flex-wrap: wrap; gap: 2mm 3mm; margin-top: 1mm; }
-        .aina > span { margin-right: 0 !important; }
         body.pos-58 .karatasi { width: 58mm; }
         body.pos-80 .karatasi { width: 80mm; }
         body.pos-58 { font-size: 9px; }
@@ -94,60 +87,29 @@
 </head>
 <body class="pos-{{ $ukubwa }}">
     <div class="toolbar">
-        <a href="{{ route('milipuko.vibali.show', $kibali) }}">Rudi</a>
+        <a href="{{ route('milipuko.mawe.show', $kibali) }}">Rudi</a>
         <button type="button" data-ukubwa="58" onclick="wekaKaratasi('58')">POS 58mm</button>
         <button type="button" data-ukubwa="80" onclick="wekaKaratasi('80')">POS 80mm</button>
         <button type="button" class="chapisha" onclick="window.print()">Chapisha</button>
     </div>
     <div class="stage">
         <div class="karatasi">
-            <div class="namba">{{ $kibali->namba }}</div>
             <div class="kichwa">
                 <div class="ofisi">BLASTING OFFICE</div>
                 <div class="kampuni">{{ $kibali->company->name ?? 'M-ERP' }}</div>
                 @if(filled($kibali->company->address ?? null))
                     <div class="anuani">{{ $kibali->company->address }}</div>
                 @endif
-                <div class="jina-kibali">KIBALI CHA KUCHORONGA MWAMBA NA KULIPUA</div>
+                <div class="jina-kibali">KIBALI CHA KUSAFIRISHA MZIGO KUTOKA MADUARANI KWENDA OFISINI</div>
             </div>
-
-            <div class="mstari">HALI <span class="thamani">{{ $kibali->haliLabel() }}@if($kibali->imefungwa()) — CLOSED @endif</span></div>
+            <div class="namba">{{ $kibali->namba }}</div>
             <div class="mstari">DUARA No. <span class="thamani">{{ $kibali->duara->namba ?? '' }}</span></div>
-            <div class="mstari">IDADI YA MATUNDU <span class="thamani">{{ $kibali->idadi_ya_matundu }}</span></div>
-            <div class="mstari">BC No. <span class="thamani">{{ $kibali->bc_no }}</span></div>
+            <div class="mstari">IDADI YA MIFUKO <span class="thamani">{{ $kibali->idadi_ya_mifuko }}</span></div>
+            <div class="mstari">AINA YA MZIGO <span class="thamani">{{ strtoupper($kibali->ainaLabel()) }}</span></div>
+            <div class="mstari">JINA LA MSIMAMIZI WA DUARA <div class="thamani">{{ $kibali->msimamizi->jina ?? '' }}</div></div>
+            <div class="mstari">JINA LA KATIBU WA IDARA <div class="thamani">{{ $kibali->katibu }}</div></div>
+            <div class="mstari">SAHIHI YA KATIBU WA IDARA <span class="sahihi"></span></div>
             <div class="mstari">TAREHE <span class="thamani">{{ $kibali->tarehe->format('d/m/Y') }}</span></div>
-            <div class="mstari">
-                JINA LA MSIMAMIZI WA DUARA
-                <div class="thamani">{{ $kibali->msimamizi->jina ?? '' }}</div>
-                <div class="sahihi">SAHIHI <span></span></div>
-            </div>
-            <div class="mstari">
-                JINA LA MLIPUAJI (BLASTA)
-                <div class="thamani">{{ $kibali->mlipuzi->jina ?? '' }}</div>
-                <div class="sahihi">SAHIHI <span></span></div>
-            </div>
-            <div class="mstari">MAJINA YA WACHORONGAJI</div>
-            <ol class="orodha">
-                @forelse($kibali->wachorongaji as $mtu)
-                    <li><span class="thamani">{{ $mtu->jina }}</span></li>
-                @empty
-                    <li><span class="thamani">—</span></li>
-                @endforelse
-            </ol>
-            <div class="mstari">
-                AINA YA MLIPUKO
-                <div class="aina">@include('milipuko.vibali._aina')</div>
-            </div>
-            <div class="mstari">
-                MSIMAMIZI WA IDARA (INSPECTOR)
-                <div class="thamani">{{ $kibali->msimamizi_wa_idara }}</div>
-                <div class="sahihi">SAHIHI <span></span></div>
-            </div>
-            <div class="mstari">
-                IMETHIBITISHWA NA KATIBU
-                <div class="thamani">{{ $kibali->katibu }}</div>
-                <div class="sahihi">SAHIHI <span></span></div>
-            </div>
             <div class="ukaguzi">
                 <img src="{{ $qr }}" alt="QR ya ukaguzi">
                 <small>SKANI KWA UKAGUZI</small>

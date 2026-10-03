@@ -143,6 +143,8 @@ use App\Http\Controllers\MilipukoController;
 use App\Http\Controllers\Milipuko\MaduaraController;
 use App\Http\Controllers\Milipuko\TaarifaController;
 use App\Http\Controllers\Milipuko\VibaliController;
+use App\Http\Controllers\Milipuko\UzalishajiWaMaduaraController;
+use App\Http\Controllers\Milipuko\VibaliVyaMaweController;
 use App\Http\Controllers\Milipuko\WalipuajiController;
 use App\Http\Controllers\AnalyticsController;
 use App\Http\Controllers\JournalController;
@@ -238,6 +240,10 @@ Route::get('/thibitisha/mlipuaji/{token}', [WalipuajiController::class, 'thibiti
     ->middleware('throttle:30,1')
     ->where('token', '[A-Za-z0-9]+')
     ->name('milipuko.walipuaji.thibitisha');
+Route::get('/thibitisha/mawe/{token}', [VibaliVyaMaweController::class, 'thibitisha'])
+    ->middleware('throttle:30,1')
+    ->where('token', '[A-Za-z0-9]+')
+    ->name('milipuko.mawe.thibitisha');
 Route::get('/thibitisha/kibali/{token}', [VibaliController::class, 'thibitisha'])
     ->middleware('throttle:30,1')
     ->where('token', '[A-Za-z0-9]+')
@@ -256,6 +262,23 @@ Route::prefix('milipuko/walipuaji')->name('milipuko.walipuaji.')->middleware(['a
     Route::get('/{mlipuzi}/edit', [WalipuajiController::class, 'edit'])->name('edit');
     Route::put('/{mlipuzi}', [WalipuajiController::class, 'update'])->name('update');
     Route::delete('/{mlipuzi}', [WalipuajiController::class, 'destroy'])->name('destroy');
+});
+Route::prefix('milipuko/uzalishaji')->name('milipuko.uzalishaji.')->middleware(['auth', 'company.scope', 'require.branch'])->group(function () {
+    Route::get('/', [UzalishajiWaMaduaraController::class, 'index'])->name('index');
+    Route::post('/', [UzalishajiWaMaduaraController::class, 'store'])->name('store');
+    Route::delete('/{uzalishaji}', [UzalishajiWaMaduaraController::class, 'destroy'])->name('destroy');
+});
+Route::prefix('milipuko/mawe')->name('milipuko.mawe.')->middleware(['auth', 'company.scope', 'require.branch'])->group(function () {
+    Route::get('/', [VibaliVyaMaweController::class, 'index'])->name('index');
+    Route::get('/data', [VibaliVyaMaweController::class, 'data'])->name('data');
+    Route::get('/create', [VibaliVyaMaweController::class, 'create'])->name('create');
+    Route::get('/maduara', [VibaliVyaMaweController::class, 'maduara'])->name('maduara');
+    Route::post('/', [VibaliVyaMaweController::class, 'store'])->name('store');
+    Route::get('/{kibali}/chapisha', [VibaliVyaMaweController::class, 'chapisha'])->name('chapisha');
+    Route::get('/{kibali}', [VibaliVyaMaweController::class, 'show'])->name('show');
+    Route::get('/{kibali}/edit', [VibaliVyaMaweController::class, 'edit'])->name('edit');
+    Route::put('/{kibali}', [VibaliVyaMaweController::class, 'update'])->name('update');
+    Route::delete('/{kibali}', [VibaliVyaMaweController::class, 'destroy'])->name('destroy');
 });
 Route::prefix('milipuko/vibali')->name('milipuko.vibali.')->middleware(['auth', 'company.scope', 'require.branch'])->group(function () {
     Route::get('/', [VibaliController::class, 'index'])->name('index');

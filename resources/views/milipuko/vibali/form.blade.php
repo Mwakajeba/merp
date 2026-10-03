@@ -112,8 +112,18 @@
                     </option>
                 @endforeach
             </select>
-            <div class="form-text text-warning" id="msimamizi-onyo" @if(($duaraLililochaguliwa?->wasimamizi->count() ?? 1) > 0) hidden @endif>
-                Duara hili halina msimamizi. Ongeza msimamizi kwenye duara kwanza.
+            <div id="msimamizi-mpya" class="border rounded p-3 mt-2 bg-light" @if(($duaraLililochaguliwa?->wasimamizi->count() ?? 1) > 0) hidden @endif>
+                <div class="form-text text-warning mb-2">Duara hili halina msimamizi. Andika hapa, atasajiliwa kwenye duara hili.</div>
+                <div class="row g-2">
+                    <div class="col-md-6">
+                        <label for="msimamizi_jina" class="form-label kibali-label">Jina</label>
+                        <input type="text" name="msimamizi_jina" id="msimamizi_jina" value="{{ old('msimamizi_jina') }}" class="form-control" maxlength="255">
+                    </div>
+                    <div class="col-md-6">
+                        <label for="msimamizi_simu" class="form-label kibali-label">Simu</label>
+                        <input type="text" name="msimamizi_simu" id="msimamizi_simu" value="{{ old('msimamizi_simu') }}" class="form-control" maxlength="30">
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -190,6 +200,21 @@
         </div>
     </div>
 
+    @unless($isEdit)
+        <div class="mt-3">
+            <div class="kibali-label mb-2">Printer ya POS</div>
+            <div class="form-check form-check-inline">
+                <input class="form-check-input" type="radio" name="karatasi" id="karatasi-58" value="58" @checked(old('karatasi', '80') === '58')>
+                <label class="form-check-label" for="karatasi-58">POS 58mm</label>
+            </div>
+            <div class="form-check form-check-inline">
+                <input class="form-check-input" type="radio" name="karatasi" id="karatasi-80" value="80" @checked(old('karatasi', '80') === '80')>
+                <label class="form-check-label" for="karatasi-80">POS 80mm</label>
+            </div>
+            <div class="form-text">Baada ya kuhifadhi, kibali kitafunguka tayari kwa printer uliyochagua.</div>
+        </div>
+    @endunless
+
     <div class="mt-3">
         <a href="{{ $isEdit ? route('milipuko.vibali.show', $kibali) : route('milipuko.vibali.index') }}" class="btn btn-secondary">Rudi</a>
         <button type="submit" class="btn btn-success">{{ $isEdit ? 'Hifadhi mabadiliko' : 'Hifadhi kibali' }}</button>
@@ -243,7 +268,7 @@
         const $msimamizi = $('#msimamizi_id');
         const $mlipuzi = $('#mlipuzi_id');
         const bcBox = document.getElementById('bc-no');
-        const onyo = document.getElementById('msimamizi-onyo');
+        const andika = document.getElementById('msimamizi-mpya');
 
         function jinaLaMsimamizi(msimamizi) {
             return msimamizi.simu ? msimamizi.jina + ' (' + msimamizi.simu + ')' : msimamizi.jina;
@@ -275,8 +300,12 @@
                 $msimamizi.append(new Option(jinaLaMsimamizi(msimamizi), msimamizi.id, amechaguliwa, amechaguliwa));
             });
 
-            onyo.hidden = !duara || orodha.length > 0;
+            const hakuna = !!duara && orodha.length === 0;
+            andika.hidden = !hakuna;
+            $msimamizi.prop('required', !hakuna).prop('disabled', hakuna);
+            $('#msimamizi_jina, #msimamizi_simu').prop('required', hakuna).prop('disabled', !hakuna);
             chaguo($msimamizi, 'Chagua msimamizi');
+            $msimamizi.next('.select2-container').toggle(!hakuna);
         }
 
         function onyeshaBc() {

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../services/auth_service.dart';
+import '../home/home_screen.dart';
 import 'forgot_password_screen.dart';
 import 'select_branch_location_screen.dart';
 
@@ -79,7 +80,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
       _isLoading = false;
       if (result['success'] != true) _pin = '';
     });
-    await _afterLogin(result);
+    await _afterLogin(result, pin: true);
   }
 
   void _addDigit(String digit) {
@@ -88,42 +89,25 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     if (_pin.length == 4) _submitPin();
   }
 
-  Future<void> _afterLogin(Map<String, dynamic> result) async {
+  Future<void> _afterLogin(Map<String, dynamic> result, {bool pin = false}) async {
     if (!mounted) return;
 
     if (result['success'] == true) {
       final user = result['user'] as Map<String, dynamic>? ?? {};
-
-      // If only one branch and at most one location for that branch, we can auto-continue
-      final branches = (user['branches'] as List?) ?? [];
-      final locations = (user['locations'] as List?) ?? [];
       final branchId = user['branch_id'];
       final locationId = user['location_id'];
+      final branchInt = branchId is int ? branchId : int.tryParse(branchId?.toString() ?? '');
+      final locInt = locationId is int ? locationId : int.tryParse(locationId?.toString() ?? '');
 
-      if (branches.length == 1 && locations.where((l) => l['branch_id'] == branches.first['id']).length <= 1) {
-        final bid = branchId ?? branches.first['id'];
-        final branchInt = bid is int ? bid : int.tryParse(bid?.toString() ?? '');
-        int? locInt;
-        if (locationId != null) {
-          locInt = locationId is int ? locationId : int.tryParse(locationId.toString());
-        } else {
-          final filtered = locations.where((l) => l['branch_id'] == branchInt).toList();
-          if (filtered.length == 1) {
-            final idVal = filtered.first['id'];
-            locInt = idVal is int ? idVal : int.tryParse(idVal.toString());
-          }
-        }
-        if (branchInt != null) {
-          await AuthService.setSelectedContext(branchId: branchInt, locationId: locInt);
-        }
+      if (pin && branchInt != null) {
+        await AuthService.setSelectedContext(branchId: branchInt, locationId: locInt);
         if (!mounted) return;
         Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (context) => SelectBranchLocationScreen(user: user)),
+          MaterialPageRoute(builder: (context) => const HomeScreen()),
         );
         return;
       }
 
-      // Otherwise show selection screen
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (context) => SelectBranchLocationScreen(user: user)),
       );

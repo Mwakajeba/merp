@@ -3,11 +3,14 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\InventoryLocation;
 use App\Models\LoginAttempt;
 use App\Models\Milipuko\Duara;
 use App\Models\Milipuko\Kibali;
+use App\Models\Milipuko\KibaliChaMawe;
 use App\Models\Milipuko\Mlipuzi;
 use App\Models\Milipuko\Msimamizi;
+use App\Models\Milipuko\UzalishajiWaDuara;
 use App\Models\User;
 use App\Services\PinService;
 use Illuminate\Http\JsonResponse;
@@ -124,7 +127,13 @@ class MilipukoMobileController extends Controller
 
         $maduara = Duara::forCompany($companyId)
             ->with('wasimamizi')
-            ->where('hali', 'inafanya_kazi')
+            ->when($request->filled('tarehe'), function ($query) use ($request) {
+                $query->whereHas('uzalishaji', function ($uzalishaji) use ($request) {
+                    $uzalishaji->whereDate('tarehe', $request->input('tarehe'));
+                });
+            }, function ($query) {
+                $query->where('hali', 'inafanya_kazi');
+            })
             ->orderBy('namba')
             ->get()
             ->map(fn (Duara $duara) => [
@@ -190,13 +199,88 @@ class MilipukoMobileController extends Controller
                 $kibali->wachorongaji()->attach($mlipuziId, ['nafasi' => $nafasi]);
             }
 
-            return $kibali->load(['duara', 'mlipuzi', 'msimamizi']);
+            return $kibali->load(['company', 'duara', 'mlipuzi', 'msimamizi', 'wachorongaji']);
         });
 
         return response()->json([
             'success' => true,
             'message' => 'Kibali '.$kibali->namba.' kimekatwa.',
             'data' => ['kibali' => $this->kibaliMaelezo($kibali)],
+        ], 201);
+    }
+
+    public function storeMawe(Request $request): JsonResponse
+    {
+        $this->kataMthibitishaji($request->user());
+        $user = $request->user();
+        $validated = $request->validate([
+            'duara_id' => ['required', 'integer'],
+            'msimamizi_id' => ['nullable', 'integer', 'required_without:msimamizi_jina'],
+            'msimamizi_jina' => ['nullable', 'string', 'max:255', 'required_without:msimamizi_id'],
+            'msimamizi_simu' => ['nullable', 'string', 'max:30', 'required_with:msimamizi_jina'],
+            'idadi_ya_mifuko' => ['required', 'integer', 'min:1', 'max:100000'],
+            'aina_ya_mzigo' => ['required', Rule::in(['mawe', 'chorongeo'])],
+            'tarehe' => ['required', 'date'],
+        ]);
+
+        $katibu = trim((string) $user->name);
+        if ($katibu === '') {
+            throw ValidationException::withMessages([
+                'katibu' => 'Jina la mtumiaji aliyeingia halipatikani.',
+            ]);
+        }
+
+        $duara = Duara::forCompany($user->company_id)->with('wasimamizi')->find($validated['duara_id']);
+        if (! $duara) {
+            throw ValidationException::withMessages([
+                'duara_id' => 'Chagua duara lililosajiliwa.',
+            ]);
+        }
+
+        $limezalisha = UzalishajiWaDuara::forCompany($user->company_id)
+            ->where('duara_id', $duara->id)
+            ->whereDate('tarehe', $validated['tarehe'])
+            ->exists();
+
+        if (! $limezalisha) {
+            throw ValidationException::withMessages([
+                'duara_id' => 'Duara hili halijasajiliwa kuwa limezalisha tarehe ya kibali.',
+            ]);
+        }
+
+        $msimamizi = Msimamizi::chaguaAuAndika(
+            $duara,
+            $validated['msimamizi_id'] ?? null,
+            $request->input('msimamizi_jina'),
+            $request->input('msimamizi_simu')
+        );
+
+        $kibali = DB::transaction(function () use ($validated, $user, $request, $katibu, $msimamizi) {
+            $max = DB::table('vibali_vya_mawe')
+                ->where('company_id', $user->company_id)
+                ->lockForUpdate()
+                ->selectRaw('MAX(CAST(namba AS UNSIGNED)) as namba_kubwa')
+                ->first()
+                ?->namba_kubwa;
+
+            return KibaliChaMawe::create([
+                'company_id' => $user->company_id,
+                'branch_id' => $this->branchId($request, $user),
+                'namba' => str_pad((string) (((int) $max) + 1), 4, '0', STR_PAD_LEFT),
+                'duara_id' => $validated['duara_id'],
+                'idadi_ya_mifuko' => $validated['idadi_ya_mifuko'],
+                'aina_ya_mzigo' => $validated['aina_ya_mzigo'],
+                'tarehe' => $validated['tarehe'],
+                'msimamizi_id' => $msimamizi->id,
+                'katibu' => $katibu,
+                'created_by' => $user->id,
+            ])->load(['company', 'duara', 'msimamizi']);
+        });
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Kibali cha mawe '.$kibali->namba.' kimekatwa.',
+            'data' => ['mawe' => $this->maweMaelezo($kibali)],
         ], 201);
     }
 
@@ -312,7 +396,9 @@ class MilipukoMobileController extends Controller
         $validated = $request->validate([
             'hali' => ['required', Rule::in(['uzalishaji', 'ufreshiaji', 'ufukuziaji'])],
             'duara_id' => ['required', 'integer'],
-            'msimamizi_id' => ['required', 'integer'],
+            'msimamizi_id' => ['nullable', 'integer', 'required_without:msimamizi_jina'],
+            'msimamizi_jina' => ['nullable', 'string', 'max:255', 'required_without:msimamizi_id'],
+            'msimamizi_simu' => ['nullable', 'string', 'max:30', 'required_with:msimamizi_jina'],
             'idadi_ya_matundu' => ['required', 'integer', 'min:0', 'max:100000'],
             'tarehe' => ['required', 'date'],
             'mlipuzi_id' => ['required', 'integer'],
@@ -323,7 +409,7 @@ class MilipukoMobileController extends Controller
         ], [
             'hali.required' => 'Hali ya kibali inahitajika.',
             'duara_id.required' => 'Duara No. inahitajika.',
-            'msimamizi_id.required' => 'Jina la msimamizi wa duara linahitajika.',
+            'msimamizi_id.required_without' => 'Chagua msimamizi wa duara, au andika jina na simu.',
             'mlipuzi_id.required' => 'Jina la mlipuaji linahitajika.',
             'aina_ya_mlipuko.required' => 'Chagua COTEX au DULL FUSE.',
             'msimamizi_wa_idara.required' => 'Jina la msimamizi wa idara linahitajika.',
@@ -337,12 +423,12 @@ class MilipukoMobileController extends Controller
             ]);
         }
 
-        $msimamizi = Msimamizi::where('company_id', $companyId)->find($validated['msimamizi_id']);
-        if (! $msimamizi || ! $duara->wasimamizi->contains('id', $msimamizi->id)) {
-            throw ValidationException::withMessages([
-                'msimamizi_id' => 'Chagua msimamizi wa duara hili.',
-            ]);
-        }
+        $msimamizi = Msimamizi::chaguaAuAndika(
+            $duara,
+            $validated['msimamizi_id'] ?? null,
+            $request->input('msimamizi_jina'),
+            $request->input('msimamizi_simu')
+        );
 
         $mlipuzi = Mlipuzi::forCompany($companyId)->with('mwenyeBc')->find($validated['mlipuzi_id']);
         if (! $mlipuzi || $mlipuzi->hali === 'blocked') {
@@ -415,6 +501,30 @@ class MilipukoMobileController extends Controller
             }
         }
 
+        if ($parsed['aina'] === 'mawe' || $parsed['aina'] === 'haijulikani') {
+            $mawe = KibaliChaMawe::forCompany($companyId)
+                ->with(['duara', 'msimamizi'])
+                ->where('uthibitisho_token', $parsed['token'])
+                ->first();
+            if ($mawe) {
+                return [
+                    'aina' => 'mawe',
+                    'halali' => true,
+                    'kimetumika' => false,
+                    'ujumbe' => 'Kibali cha '.$mawe->ainaLabel().' ni halali.',
+                    'mawe' => [
+                        'namba' => $mawe->namba,
+                        'tarehe' => optional($mawe->tarehe)->format('d/m/Y'),
+                        'duara' => $mawe->duara->namba ?? null,
+                        'aina' => $mawe->ainaLabel(),
+                        'mifuko' => $mawe->idadi_ya_mifuko,
+                        'msimamizi' => $mawe->msimamizi->jina ?? null,
+                        'katibu' => $mawe->katibu,
+                    ],
+                ];
+            }
+        }
+
         if ($parsed['aina'] === 'mlipuzi' || $parsed['aina'] === 'haijulikani') {
             $mtu = Mlipuzi::forCompany($companyId)
                 ->with('mwenyeBc')
@@ -449,6 +559,9 @@ class MilipukoMobileController extends Controller
         if (preg_match('#thibitisha/kibali/([A-Za-z0-9]+)#', $code, $m)) {
             return ['aina' => 'kibali', 'token' => $m[1]];
         }
+        if (preg_match('#thibitisha/mawe/([A-Za-z0-9]+)#', $code, $m)) {
+            return ['aina' => 'mawe', 'token' => $m[1]];
+        }
         if (preg_match('#thibitisha/mlipuaji/([A-Za-z0-9]+)#', $code, $m)) {
             return ['aina' => 'mlipuzi', 'token' => $m[1]];
         }
@@ -470,9 +583,32 @@ class MilipukoMobileController extends Controller
             'matundu' => $kibali->idadi_ya_matundu,
             'bc_no' => $kibali->bc_no,
             'katibu' => $kibali->katibu,
+            'msimamizi_wa_idara' => $kibali->msimamizi_wa_idara,
+            'wachorongaji' => $kibali->relationLoaded('wachorongaji')
+                ? $kibali->wachorongaji->pluck('jina')->values()
+                : [],
+            'kampuni' => $kibali->company?->name,
+            'anuani' => $kibali->company?->address,
+            'ukaguzi_url' => $kibali->thibitishoUrl(),
             'kimetumika' => $kibali->imefungwa(),
             'imetumika_saa' => optional($kibali->imefungwa_at)->format('d/m/Y H:i'),
             'token' => $kibali->uthibitisho_token,
+        ];
+    }
+
+    private function maweMaelezo(KibaliChaMawe $kibali): array
+    {
+        return [
+            'namba' => $kibali->namba,
+            'tarehe' => optional($kibali->tarehe)->format('d/m/Y'),
+            'duara' => $kibali->duara->namba ?? null,
+            'mifuko' => $kibali->idadi_ya_mifuko,
+            'aina' => $kibali->ainaLabel(),
+            'msimamizi' => $kibali->msimamizi->jina ?? null,
+            'katibu' => $kibali->katibu,
+            'kampuni' => $kibali->company?->name,
+            'anuani' => $kibali->company?->address,
+            'ukaguzi_url' => $kibali->thibitishoUrl(),
         ];
     }
 
@@ -507,10 +643,34 @@ class MilipukoMobileController extends Controller
 
     private function formatUser(User $user): array
     {
-        $user->loadMissing(['branch', 'branches', 'company']);
+        $user->loadMissing(['branch', 'branches', 'company', 'locations']);
         $branches = $user->branches;
         if ($branches->isEmpty() && $user->branch) {
             $branches = collect([$user->branch]);
+        }
+
+        $branchId = (int) ($user->branch_id ?: $branches->first()?->id ?: 0);
+        $locations = $user->locations;
+        $location = $locations->first(fn ($loc) => (int) $loc->branch_id === $branchId && (int) $loc->pivot->is_default === 1)
+            ?: $locations->first(fn ($loc) => (int) $loc->branch_id === $branchId)
+            ?: $locations->first();
+
+        if (! $location && $branchId) {
+            $location = InventoryLocation::where('branch_id', $branchId)->orderBy('name')->first();
+        }
+
+        $locationRows = $locations->map(fn ($loc) => [
+            'id' => $loc->id,
+            'name' => $loc->name,
+            'branch_id' => $loc->branch_id,
+        ])->values();
+
+        if ($location && $locationRows->where('id', $location->id)->isEmpty()) {
+            $locationRows->push([
+                'id' => $location->id,
+                'name' => $location->name,
+                'branch_id' => $location->branch_id,
+            ]);
         }
 
         return [
@@ -518,13 +678,15 @@ class MilipukoMobileController extends Controller
             'name' => $user->name,
             'phone' => $user->phone,
             'company' => $user->company?->name,
-            'branch_id' => $user->branch_id ?: $branches->first()?->id,
-            'location_id' => null,
+            'branch_id' => $branchId ?: null,
+            'location_id' => $location?->id,
+            'branch_name' => $branches->firstWhere('id', $branchId)?->name ?? $user->branch?->name,
+            'location_name' => $location?->name,
             'branches' => $branches->map(fn ($b) => [
                 'id' => $b->id,
                 'name' => $b->name,
             ])->values(),
-            'locations' => [],
+            'locations' => $locationRows,
             'roles' => $user->getRoleNames()->values(),
             'verifier_only' => $this->niMthibitishajiPekee($user),
         ];

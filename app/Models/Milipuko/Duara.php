@@ -60,6 +60,16 @@ class Duara extends Model
         return $this->hasMany(Kibali::class, 'duara_id');
     }
 
+    public function vibaliVyaMawe(): HasMany
+    {
+        return $this->hasMany(KibaliChaMawe::class, 'duara_id');
+    }
+
+    public function uzalishaji(): HasMany
+    {
+        return $this->hasMany(UzalishajiWaDuara::class, 'duara_id');
+    }
+
     public function scopeForCompany($query, $companyId)
     {
         return $query->where('company_id', $companyId);

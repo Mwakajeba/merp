@@ -58,10 +58,40 @@
                                         <div class="mb-3">
                                             <i class="bx bx-id-card fs-1 text-success"></i>
                                         </div>
-                                        <h5 class="card-title">Vibali</h5>
+                                        <h5 class="card-title">Vibali vya milipuko</h5>
                                         <p class="card-text">Kibali cha kuchoronga mwamba na kulipua.</p>
                                         <a href="{{ route('milipuko.vibali.index') }}" class="btn btn-success">
-                                            <i class="bx bx-id-card me-1"></i> Fungua Vibali
+                                            <i class="bx bx-id-card me-1"></i> Fungua vibali
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col-md-6 col-lg-4 mb-4">
+                                <div class="card border-danger milipuko-card h-100">
+                                    <div class="card-body text-center">
+                                        <div class="mb-3">
+                                            <i class="bx bx-package fs-1 text-danger"></i>
+                                        </div>
+                                        <h5 class="card-title">Vibali vya Mawe</h5>
+                                        <p class="card-text">Kibali cha kuchukua mifuko ya mawe au chorongeo kutoka duarani kwenda ofisini.</p>
+                                        <a href="{{ route('milipuko.mawe.index') }}" class="btn btn-danger">
+                                            <i class="bx bx-package me-1"></i> Fungua vibali
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col-md-6 col-lg-4 mb-4">
+                                <div class="card border-secondary milipuko-card h-100">
+                                    <div class="card-body text-center">
+                                        <div class="mb-3">
+                                            <i class="bx bx-calendar-check fs-1 text-secondary"></i>
+                                        </div>
+                                        <h5 class="card-title">Maduara yaliyozalisha</h5>
+                                        <p class="card-text">Sajili duara na tarehe iliyozalisha, kisha ona mifuko ya mawe na chorongeo iliyotoka.</p>
+                                        <a href="{{ route('milipuko.uzalishaji.index') }}" class="btn btn-secondary">
+                                            <i class="bx bx-calendar-check me-1"></i> Fungua uzalishaji
                                         </a>
                                     </div>
                                 </div>
