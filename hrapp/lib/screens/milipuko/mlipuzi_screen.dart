@@ -90,6 +90,11 @@ class _MlipuziScreenState extends State<MlipuziScreen> {
                     Center(child: _Beji(amefungwa: mtu['hali'] == 'blocked')),
                     const SizedBox(height: 16),
                     _KadiMaelezo(mistari: [
+                      _Mstari('Namba ya usajili', (mtu['namba_ya_usajili'] ?? '—').toString()),
+                      _Mstari('Jinsia', (mtu['jinsia_label'] ?? '—').toString()),
+                      if ((mtu['tarehe_ya_kuzaliwa'] ?? '').toString().isNotEmpty) _Mstari('Tarehe ya kuzaliwa', mtu['tarehe_ya_kuzaliwa'].toString()),
+                      if (mtu['umri'] != null) _Mstari('Umri', '${mtu['umri']} miaka'),
+                      _Mstari('Cheti cha milipuko', (mtu['cheti'] ?? '').toString().isEmpty ? 'Hakijawekwa' : 'Kimewekwa'),
                       _Mstari('BC No.', (mtu['bc_no'] ?? '—').toString()),
                       if ((mtu['mwenye_bc'] ?? '').toString().isNotEmpty) _Mstari('Mwenye BC', mtu['mwenye_bc'].toString()),
                       _Mstari('Simu', (mtu['simu'] ?? '—').toString()),
@@ -155,7 +160,8 @@ class _KadiMbele extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ukaguzi = (mtu['ukaguzi_url'] ?? '').toString();
-    final bc = (mtu['bc_no'] ?? '').toString().trim();
+    final usajili = (mtu['namba_ya_usajili'] ?? '').toString().trim();
+    final jinsia = (mtu['jinsia_label'] ?? '').toString();
     return AspectRatio(
       aspectRatio: 85.6 / 54,
       child: Container(
@@ -197,7 +203,7 @@ class _KadiMbele extends StatelessWidget {
                               textAlign: TextAlign.center,
                               style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, letterSpacing: 0.2),
                             ),
-                            if (bc.isNotEmpty) Text(bc, textAlign: TextAlign.center, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800)),
+                            if (usajili.isNotEmpty) Text(usajili, textAlign: TextAlign.center, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800)),
                           ],
                         ),
                         Row(
@@ -224,7 +230,7 @@ class _KadiMbele extends StatelessWidget {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     _MstariKadi('Jina', (mtu['jina'] ?? '').toString()),
-                                    const _MstariKadi('Jinsia', 'ME'),
+                                    _MstariKadi('Jinsia', jinsia),
                                     _MstariKadi('Simu', (mtu['simu'] ?? '').toString()),
                                     _MstariKadi('Mkoa', (mtu['mkoa'] ?? '').toString()),
                                     _MstariKadi('Wilaya', (mtu['wilaya'] ?? '').toString()),
@@ -238,7 +244,7 @@ class _KadiMbele extends StatelessWidget {
                             ],
                           ],
                         ),
-                        if (bc.isNotEmpty) _BarcodeNdogo(data: bc) else const SizedBox(height: 22),
+                        if (usajili.isNotEmpty) _BarcodeNdogo(data: usajili) else const SizedBox(height: 22),
                       ],
                     );
                   },

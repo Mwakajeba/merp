@@ -11,7 +11,8 @@ const _kijani = PdfColor.fromInt(0xFF0B6E4F);
 
 Future<Uint8List> jengaKitambulisho(Map<String, dynamic> mtu) async {
   final jina = (mtu['jina'] ?? '').toString();
-  final bc = (mtu['bc_no'] ?? '').toString().trim();
+  final usajili = (mtu['namba_ya_usajili'] ?? '').toString().trim();
+  final jinsia = (mtu['jinsia_label'] ?? '').toString().trim();
   final simu = (mtu['simu'] ?? '').toString();
   final mkoa = (mtu['mkoa'] ?? '').toString();
   final wilaya = (mtu['wilaya'] ?? '').toString();
@@ -61,8 +62,8 @@ Future<Uint8List> jengaKitambulisho(Map<String, dynamic> mtu) async {
                           textAlign: pw.TextAlign.center,
                           style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold, letterSpacing: 0.2),
                         ),
-                        if (bc.isNotEmpty)
-                          pw.Text(bc, textAlign: pw.TextAlign.center, style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold)),
+                        if (usajili.isNotEmpty)
+                          pw.Text(usajili, textAlign: pw.TextAlign.center, style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold)),
                       ],
                     ),
                     pw.Row(
@@ -86,7 +87,7 @@ Future<Uint8List> jengaKitambulisho(Map<String, dynamic> mtu) async {
                               crossAxisAlignment: pw.CrossAxisAlignment.start,
                               children: [
                                 _mstari('Jina', jina),
-                                _mstari('Jinsia', 'ME'),
+                                _mstari('Jinsia', jinsia),
                                 _mstari('Simu', simu),
                                 _mstari('Mkoa', mkoa),
                                 _mstari('Wilaya', wilaya),
@@ -100,10 +101,10 @@ Future<Uint8List> jengaKitambulisho(Map<String, dynamic> mtu) async {
                         ],
                       ],
                     ),
-                    if (bc.isNotEmpty)
+                    if (usajili.isNotEmpty)
                       pw.BarcodeWidget(
                         barcode: pw.Barcode.code128(),
-                        data: bc,
+                        data: usajili,
                         width: 210,
                         height: 22,
                         drawText: false,

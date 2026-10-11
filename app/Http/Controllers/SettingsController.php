@@ -1092,8 +1092,12 @@ class SettingsController extends Controller
         $backupService = new BackupService();
         $backups = Backup::forCompany()->orderBy('created_at', 'desc')->paginate(10);
         $stats = $backupService->getBackupStats();
+        $localDatabase = config('database.connections.mysql.database');
+        $localHost = config('database.connections.mysql.host');
+        $uploadLimit = ini_get('upload_max_filesize');
+        $sqlImportFiles = $backupService->availableSqlImports();
 
-        return view('settings.backup', compact('backups', 'stats'));
+        return view('settings.backup', compact('backups', 'stats', 'localDatabase', 'localHost', 'uploadLimit', 'sqlImportFiles'));
     }
 
     public function createBackup(Request $request)
@@ -1161,6 +1165,67 @@ class SettingsController extends Controller
 
         } catch (\Exception $e) {
             return redirect()->route('settings.backup')->with('error', 'Restore failed: ' . $e->getMessage());
+        }
+    }
+
+    public function importSqlDatabase(Request $request)
+    {
+        if (!auth()->user()->can('restore backup') &&
+            !auth()->user()->can('manage system settings') &&
+            !auth()->user()->hasRole('admin')) {
+            abort(403, 'You do not have permission to import a database.');
+        }
+
+        if ((int) $request->server('CONTENT_LENGTH') > 0 && empty($request->all()) && !$request->hasFile('sql_file')) {
+            return redirect()->route('settings.backup')->with(
+                'error',
+                'The SQL file is larger than the PHP upload limit (' . ini_get('upload_max_filesize') . '). Copy it into storage/app/sql-imports and import it from the server file list.'
+            );
+        }
+
+        $request->validate([
+            'sql_file' => 'nullable|file',
+            'server_file' => 'nullable|string|max:255',
+            'confirm_replace' => 'accepted',
+        ]);
+
+        if (!$request->hasFile('sql_file') && !$request->filled('server_file')) {
+            return redirect()->route('settings.backup')->with('error', 'Choose an SQL file to import.');
+        }
+
+        $backupService = new BackupService();
+        $temporaryFile = null;
+
+        try {
+            if ($request->hasFile('sql_file')) {
+                $upload = $request->file('sql_file');
+                $originalName = strtolower($upload->getClientOriginalName());
+                if (!preg_match('/\.sql(\.gz)?$/', $originalName)) {
+                    return redirect()->route('settings.backup')->with('error', 'Upload a .sql or .sql.gz file exported from the online database.');
+                }
+
+                $temporaryFile = $upload->storeAs(
+                    'temp',
+                    'sql-import-' . \Illuminate\Support\Str::uuid() . (str_ends_with($originalName, '.gz') ? '.sql.gz' : '.sql')
+                );
+                $sqlPath = storage_path('app/' . $temporaryFile);
+            } else {
+                $sqlPath = $backupService->resolveSqlImportFile($request->server_file);
+            }
+
+            set_time_limit(0);
+            $backupService->importSqlIntoLocalDatabase($sqlPath);
+
+            return redirect()->route('settings.backup')->with(
+                'success',
+                'SQL database imported into the local database (' . config('database.connections.mysql.database') . '). You can keep working offline.'
+            );
+        } catch (\Exception $e) {
+            return redirect()->route('settings.backup')->with('error', 'SQL import failed: ' . $e->getMessage());
+        } finally {
+            if ($temporaryFile) {
+                Storage::delete($temporaryFile);
+            }
         }
     }
 

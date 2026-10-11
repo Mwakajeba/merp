@@ -137,6 +137,66 @@
                 </div>
             </div>
 
+            <!-- Import online SQL into the local database -->
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Import SQL Database</h5>
+                        <p class="text-muted mb-3">
+                            Bring the online database offline. Export a <code>.sql</code> or <code>.sql.gz</code> dump from the live server, then import it here.
+                            The dump replaces the data in this local database so the app can run without the online server.
+                        </p>
+
+                        <div class="alert alert-warning">
+                            <i class="bx bx-error me-1"></i>
+                            This writes into the local database <strong>{{ $localDatabase }}</strong> on <strong>{{ $localHost }}</strong>.
+                            Current local data in that database is replaced. <code>CREATE DATABASE</code> and <code>USE</code> lines in the dump are ignored, so the online database name does not have to match.
+                        </div>
+
+                        <form id="importSqlForm" action="{{ route('settings.backup.import-sql') }}" method="POST" enctype="multipart/form-data">
+                            @csrf
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="sql_file" class="form-label">Upload SQL file</label>
+                                        <input type="file" class="form-control" id="sql_file" name="sql_file" accept=".sql,.gz,application/sql,application/gzip,application/x-gzip">
+                                        <div class="form-text">
+                                            Browser upload limit is {{ $uploadLimit }}. Larger dumps should be copied into
+                                            <code>storage/app/sql-imports</code> and selected on the right.
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="server_file" class="form-label">Or use a file already on this computer</label>
+                                        <select class="form-select" id="server_file" name="server_file">
+                                            <option value="">Select a file from storage/app/sql-imports</option>
+                                            @foreach($sqlImportFiles as $sqlFile)
+                                                <option value="{{ $sqlFile['name'] }}">
+                                                    {{ $sqlFile['name'] }} ({{ number_format($sqlFile['size'] / 1024 / 1024, 2) }} MB)
+                                                </option>
+                                            @endforeach
+                                        </select>
+                                        <div class="form-text">Refresh this page after you copy a new dump into that folder.</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-check mb-3">
+                                <input class="form-check-input" type="checkbox" value="1" id="confirm_replace" name="confirm_replace" required>
+                                <label class="form-check-label" for="confirm_replace">
+                                    I understand this replaces the local offline database.
+                                </label>
+                            </div>
+
+                            <button type="submit" class="btn btn-danger">
+                                <i class="bx bx-import me-1"></i> Import into offline database
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
             <!-- Backup List -->
             <div class="col-12">
                 <div class="card">
@@ -283,6 +343,42 @@
 @push('scripts')
 <script nonce="{{ $cspNonce ?? '' }}">
 document.addEventListener('DOMContentLoaded', function() {
+    const importSqlForm = document.getElementById('importSqlForm');
+    if (importSqlForm) {
+        importSqlForm.addEventListener('submit', function(event) {
+            const sqlFile = document.getElementById('sql_file');
+            const serverFile = document.getElementById('server_file');
+            const hasUpload = sqlFile && sqlFile.files && sqlFile.files.length > 0;
+            const hasServerFile = serverFile && serverFile.value !== '';
+
+            if (!hasUpload && !hasServerFile) {
+                event.preventDefault();
+                Swal.fire({
+                    title: 'SQL file required',
+                    text: 'Upload a .sql file or select one from storage/app/sql-imports.',
+                    icon: 'warning'
+                });
+                return;
+            }
+
+            event.preventDefault();
+            Swal.fire({
+                title: 'Replace the local database?',
+                text: 'The online SQL dump will replace data in {{ $localDatabase }}. This cannot be undone from this screen.',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#3085d6',
+                confirmButtonText: 'Yes, import it',
+                cancelButtonText: 'Cancel'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    importSqlForm.submit();
+                }
+            });
+        });
+    }
+
     // Make functions globally available
     window.confirmRestore = function(backupId, backupName) {
         Swal.fire({

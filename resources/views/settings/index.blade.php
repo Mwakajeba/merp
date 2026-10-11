@@ -124,7 +124,7 @@
                                             <i class="bx bx-data fs-1 text-danger"></i>
                                         </div>
                                         <h5 class="card-title">Backup Settings</h5>
-                                        <p class="card-text">Manage data backup and restore operations.</p>
+                                        <p class="card-text">Manage backups, restore, and import an SQL dump from the online database for offline use.</p>
                                         <a href="{{ route('settings.backup') }}" class="btn btn-danger">
                                             <i class="bx bx-cog me-1"></i> Configure
                                         </a>

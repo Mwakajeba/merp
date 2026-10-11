@@ -47,12 +47,17 @@ class MilipukoService {
     Map<String, String> fields, {
     String? fileField,
     String? filePath,
+    Map<String, String> files = const {},
   }) async {
     final request = http.MultipartRequest('POST', Uri.parse(ApiConfig.getUrl(endpoint)));
     request.headers.addAll(await _headers(json: false));
     request.fields.addAll(fields);
     if (fileField != null && filePath != null && filePath.isNotEmpty) {
       request.files.add(await http.MultipartFile.fromPath(fileField, filePath));
+    }
+    for (final faili in files.entries) {
+      if (faili.value.isEmpty) continue;
+      request.files.add(await http.MultipartFile.fromPath(faili.key, faili.value));
     }
     final streamed = await request.send();
     final response = await http.Response.fromStream(streamed);

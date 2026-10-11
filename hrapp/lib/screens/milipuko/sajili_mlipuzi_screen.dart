@@ -14,6 +14,7 @@ class SajiliMlipuziScreen extends StatefulWidget {
 class _SajiliMlipuziScreenState extends State<SajiliMlipuziScreen> {
   final _form = GlobalKey<FormState>();
   final _jina = TextEditingController();
+  final _usajili = TextEditingController();
   final _bc = TextEditingController();
   final _simu = TextEditingController();
   final _simuMbadala = TextEditingController();
@@ -26,10 +27,13 @@ class _SajiliMlipuziScreenState extends State<SajiliMlipuziScreen> {
   bool _inahifadhi = false;
   String _hali = 'active';
   String _aina = 'yake';
+  String _jinsia = 'me';
+  DateTime? _kuzaliwa;
   String? _mkoa;
   String? _wilaya;
   int? _mwenyeBc;
   String? _picha;
+  String? _cheti;
   List<String> _mikoa = [];
   Map<String, List<String>> _wilayaZote = {};
   List<Map<String, dynamic>> _wenyeBc = [];
@@ -43,6 +47,7 @@ class _SajiliMlipuziScreenState extends State<SajiliMlipuziScreen> {
   @override
   void dispose() {
     _jina.dispose();
+    _usajili.dispose();
     _bc.dispose();
     _simu.dispose();
     _simuMbadala.dispose();
@@ -101,6 +106,46 @@ class _SajiliMlipuziScreenState extends State<SajiliMlipuziScreen> {
     setState(() => _picha = file.path);
   }
 
+  Future<void> _chaguaCheti() async {
+    final chanzo = await showModalBottomSheet<ImageSource>(
+      context: context,
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.photo_camera_rounded),
+              title: const Text('Piga picha ya cheti'),
+              onTap: () => Navigator.pop(context, ImageSource.camera),
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library_rounded),
+              title: const Text('Chagua cheti kwenye simu'),
+              onTap: () => Navigator.pop(context, ImageSource.gallery),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (chanzo == null) return;
+    final file = await ImagePicker().pickImage(source: chanzo, imageQuality: 70, maxWidth: 1600);
+    if (file == null || !mounted) return;
+    setState(() => _cheti = file.path);
+  }
+
+  Future<void> _chaguaTarehe() async {
+    final leo = DateTime.now();
+    final tarehe = await showDatePicker(
+      context: context,
+      initialDate: _kuzaliwa ?? DateTime(leo.year - 25, leo.month, leo.day),
+      firstDate: DateTime(1940),
+      lastDate: DateTime(leo.year, leo.month, leo.day),
+      helpText: 'Tarehe ya kuzaliwa',
+    );
+    if (tarehe == null || !mounted) return;
+    setState(() => _kuzaliwa = tarehe);
+  }
+
   Future<void> _hifadhi() async {
     if (!_form.currentState!.validate() || _inahifadhi) return;
     final anaMwasiliano = _mwasilianoJina.text.trim().isNotEmpty || _mwasilianoSimu.text.trim().isNotEmpty || _uhusiano.text.trim().isNotEmpty;
@@ -112,12 +157,19 @@ class _SajiliMlipuziScreenState extends State<SajiliMlipuziScreen> {
     setState(() => _inahifadhi = true);
     final fields = <String, String>{
       'jina': _jina.text.trim(),
+      'namba_ya_usajili': _usajili.text.trim(),
       'hali': _hali,
       'aina_ya_bc': _aina,
       'simu': _simu.text.trim(),
       'mkoa': _mkoa ?? '',
       'wilaya': _wilaya ?? '',
     };
+    fields['jinsia'] = _jinsia;
+    if (_kuzaliwa != null) {
+      final mwezi = _kuzaliwa!.month.toString().padLeft(2, '0');
+      final siku = _kuzaliwa!.day.toString().padLeft(2, '0');
+      fields['tarehe_ya_kuzaliwa'] = '${_kuzaliwa!.year}-$mwezi-$siku';
+    }
     if (_aina == 'yake') {
       fields['bc_no'] = _bc.text.trim();
     } else if (_mwenyeBc != null) {
@@ -134,8 +186,10 @@ class _SajiliMlipuziScreenState extends State<SajiliMlipuziScreen> {
     final result = await MilipukoService.postMultipart(
       ApiConfig.milipukoWalipuaji,
       fields,
-      fileField: 'picha',
-      filePath: _picha,
+      files: {
+        if (_picha != null) 'picha': _picha!,
+        if (_cheti != null) 'cheti_cha_milipuko': _cheti!,
+      },
     );
     if (!mounted) return;
     setState(() => _inahifadhi = false);
@@ -170,6 +224,31 @@ class _SajiliMlipuziScreenState extends State<SajiliMlipuziScreen> {
                     controller: _jina,
                     decoration: const InputDecoration(labelText: 'Jina', filled: true, fillColor: Colors.white),
                     validator: (v) => (v ?? '').trim().isEmpty ? 'Jina linahitajika.' : null,
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: _usajili,
+                    decoration: const InputDecoration(labelText: 'Namba ya Usajili', filled: true, fillColor: Colors.white),
+                    validator: (v) => (v ?? '').trim().isEmpty ? 'Namba ya usajili inahitajika.' : null,
+                  ),
+                  const SizedBox(height: 12),
+                  DropdownButtonFormField<String>(
+                    initialValue: _jinsia,
+                    decoration: const InputDecoration(labelText: 'Jinsia', filled: true, fillColor: Colors.white),
+                    items: const [
+                      DropdownMenuItem(value: 'me', child: Text('Me')),
+                      DropdownMenuItem(value: 'ke', child: Text('Ke')),
+                    ],
+                    onChanged: (v) => setState(() => _jinsia = v ?? 'me'),
+                    validator: (v) => v == 'me' || v == 'ke' ? null : 'Chagua jinsia.',
+                  ),
+                  const SizedBox(height: 12),
+                  OutlinedButton.icon(
+                    onPressed: _chaguaTarehe,
+                    icon: const Icon(Icons.cake_outlined),
+                    label: Text(_kuzaliwa == null
+                        ? 'Tarehe ya kuzaliwa (si lazima)'
+                        : 'Kuzaliwa: ${_kuzaliwa!.day}/${_kuzaliwa!.month}/${_kuzaliwa!.year}'),
                   ),
                   const SizedBox(height: 12),
                   DropdownButtonFormField<String>(
@@ -247,6 +326,12 @@ class _SajiliMlipuziScreenState extends State<SajiliMlipuziScreen> {
                     controller: _eneo,
                     maxLines: 2,
                     decoration: const InputDecoration(labelText: 'Eneo', filled: true, fillColor: Colors.white),
+                  ),
+                  const SizedBox(height: 12),
+                  OutlinedButton.icon(
+                    onPressed: _chaguaCheti,
+                    icon: const Icon(Icons.badge_outlined),
+                    label: Text(_cheti == null ? 'Cheti cha Milipuko (si lazima)' : 'Cheti kimechaguliwa'),
                   ),
                   const SizedBox(height: 12),
                   OutlinedButton.icon(

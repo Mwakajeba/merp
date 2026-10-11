@@ -42,6 +42,17 @@
             <div class="card-body">
                 <h6 class="mb-3">Taarifa</h6>
                         <p class="mb-1"><strong>Jina:</strong> {{ $mlipuzi->jina }}</p>
+                        <p class="mb-1"><strong>Namba ya usajili:</strong> {{ $mlipuzi->namba_ya_usajili ?: '—' }}</p>
+                        <p class="mb-1"><strong>Jinsia:</strong> {{ $mlipuzi->jinsiaLabel() ?: '—' }}</p>
+                        <p class="mb-1"><strong>Tarehe ya kuzaliwa:</strong> {{ $mlipuzi->tarehe_ya_kuzaliwa?->format('d/m/Y') ?: '—' }}</p>
+                        <p class="mb-1"><strong>Umri:</strong> {{ $mlipuzi->umri() !== null ? $mlipuzi->umri().' miaka' : '—' }}</p>
+                        <p class="mb-1"><strong>Cheti cha milipuko:</strong>
+                            @if($mlipuzi->chetiUrl())
+                                <a href="{{ $mlipuzi->chetiUrl() }}" target="_blank" rel="noopener">Angalia cheti</a>
+                            @else
+                                —
+                            @endif
+                        </p>
                         <p class="mb-1"><strong>Hali:</strong>
                             @if($mlipuzi->hali === 'blocked')
                                 <span class="badge bg-danger">Blocked</span>

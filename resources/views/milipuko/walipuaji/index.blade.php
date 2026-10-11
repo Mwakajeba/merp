@@ -27,6 +27,7 @@
                             <tr>
                                 <th>Picha</th>
                                 <th>Jina</th>
+                                <th>Namba ya usajili</th>
                                 <th>BC No.</th>
                                 <th>Hali</th>
                                 <th>Simu</th>
@@ -46,6 +47,7 @@
                                         @endif
                                     </td>
                                     <td>{{ $mlipuzi->jina }}</td>
+                                    <td>{{ $mlipuzi->namba_ya_usajili ?: '—' }}</td>
                                     <td>
                                         {{ $mlipuzi->bcInayotumika() ?: '—' }}
                                         @if($mlipuzi->aina_ya_bc === 'mtu' && $mlipuzi->mwenyeBc)
@@ -70,7 +72,7 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="8" class="text-center text-muted py-4">{{ $hali === 'blocked' ? 'Hakuna blasta waliofungiwa.' : 'Hakuna walipuaji waliowekwa bado.' }}</td>
+                                    <td colspan="9" class="text-center text-muted py-4">{{ $hali === 'blocked' ? 'Hakuna blasta waliofungiwa.' : 'Hakuna walipuaji waliowekwa bado.' }}</td>
                                 </tr>
                             @endforelse
                         </tbody>

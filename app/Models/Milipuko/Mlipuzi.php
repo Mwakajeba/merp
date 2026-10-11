@@ -25,6 +25,9 @@ class Mlipuzi extends Model
         'company_id',
         'branch_id',
         'jina',
+        'namba_ya_usajili',
+        'jinsia',
+        'tarehe_ya_kuzaliwa',
         'hali',
         'aina_ya_bc',
         'bc_no',
@@ -32,10 +35,15 @@ class Mlipuzi extends Model
         'simu',
         'simu_mbadala',
         'picha',
+        'cheti_cha_milipuko',
         'mkoa',
         'wilaya',
         'eneo',
         'created_by',
+    ];
+
+    protected $casts = [
+        'tarehe_ya_kuzaliwa' => 'date',
     ];
 
     protected static function booted(): void
@@ -47,8 +55,10 @@ class Mlipuzi extends Model
         });
 
         static::deleting(function (Mlipuzi $mlipuzi) {
-            if ($mlipuzi->picha && Storage::disk('public')->exists($mlipuzi->picha)) {
-                Storage::disk('public')->delete($mlipuzi->picha);
+            foreach (['picha', 'cheti_cha_milipuko'] as $faili) {
+                if ($mlipuzi->{$faili} && Storage::disk('public')->exists($mlipuzi->{$faili})) {
+                    Storage::disk('public')->delete($mlipuzi->{$faili});
+                }
             }
 
             foreach ($mlipuzi->makosa as $rekodi) {
@@ -130,6 +140,25 @@ class Mlipuzi extends Model
 
                 $kibali->setAttribute('jukumu', implode(', ', $majukumu));
             });
+    }
+
+    public function jinsiaLabel(): ?string
+    {
+        return match ($this->jinsia) {
+            'me' => 'Me',
+            'ke' => 'Ke',
+            default => null,
+        };
+    }
+
+    public function umri(): ?int
+    {
+        return $this->tarehe_ya_kuzaliwa?->age;
+    }
+
+    public function chetiUrl(): ?string
+    {
+        return $this->cheti_cha_milipuko ? '/storage/' . ltrim($this->cheti_cha_milipuko, '/') : null;
     }
 
     public function bcInayotumika(): ?string

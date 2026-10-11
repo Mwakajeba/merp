@@ -44,13 +44,17 @@ class WalipuajiController extends Controller
     {
         $data = $this->validated($request);
         $picha = $this->storePicha($request);
+        $cheti = $this->storeCheti($request);
 
         try {
-            $mlipuzi = DB::transaction(function () use ($data, $picha) {
+            $mlipuzi = DB::transaction(function () use ($data, $picha, $cheti) {
                 $mlipuzi = Mlipuzi::create([
                     'company_id' => auth()->user()->company_id,
                     'branch_id' => session('branch_id') ?: auth()->user()->branch_id,
                     'jina' => $data['jina'],
+                    'namba_ya_usajili' => $data['namba_ya_usajili'],
+                    'jinsia' => $data['jinsia'],
+                    'tarehe_ya_kuzaliwa' => $data['tarehe_ya_kuzaliwa'],
                     'hali' => $data['hali'],
                     'aina_ya_bc' => $data['aina_ya_bc'],
                     'bc_no' => $data['bc_no'],
@@ -58,6 +62,7 @@ class WalipuajiController extends Controller
                     'simu' => $data['simu'],
                     'simu_mbadala' => $data['simu_mbadala'],
                     'picha' => $picha,
+                    'cheti_cha_milipuko' => $cheti,
                     'mkoa' => $data['mkoa'],
                     'wilaya' => $data['wilaya'],
                     'eneo' => $data['eneo'],
@@ -70,6 +75,7 @@ class WalipuajiController extends Controller
             });
         } catch (\Throwable $exception) {
             $this->deletePicha($picha);
+            $this->deletePicha($cheti);
             throw $exception;
         }
 
@@ -107,13 +113,18 @@ class WalipuajiController extends Controller
     {
         $data = $this->validated($request, $mlipuzi);
         $pichaMpya = $this->storePicha($request);
+        $chetiMpya = $this->storeCheti($request);
 
         try {
-            DB::transaction(function () use ($mlipuzi, $data, $pichaMpya) {
+            DB::transaction(function () use ($mlipuzi, $data, $pichaMpya, $chetiMpya) {
                 $pichaYaZamani = $mlipuzi->picha;
+                $chetiChaZamani = $mlipuzi->cheti_cha_milipuko;
 
                 $mlipuzi->update([
                     'jina' => $data['jina'],
+                    'namba_ya_usajili' => $data['namba_ya_usajili'],
+                    'jinsia' => $data['jinsia'],
+                    'tarehe_ya_kuzaliwa' => $data['tarehe_ya_kuzaliwa'],
                     'hali' => $data['hali'],
                     'aina_ya_bc' => $data['aina_ya_bc'],
                     'bc_no' => $data['bc_no'],
@@ -121,6 +132,7 @@ class WalipuajiController extends Controller
                     'simu' => $data['simu'],
                     'simu_mbadala' => $data['simu_mbadala'],
                     'picha' => $pichaMpya ?: $mlipuzi->picha,
+                    'cheti_cha_milipuko' => $chetiMpya ?: $mlipuzi->cheti_cha_milipuko,
                     'mkoa' => $data['mkoa'],
                     'wilaya' => $data['wilaya'],
                     'eneo' => $data['eneo'],
@@ -131,9 +143,13 @@ class WalipuajiController extends Controller
                 if ($pichaMpya && $pichaYaZamani) {
                     $this->deletePicha($pichaYaZamani);
                 }
+                if ($chetiMpya && $chetiChaZamani) {
+                    $this->deletePicha($chetiChaZamani);
+                }
             });
         } catch (\Throwable $exception) {
             $this->deletePicha($pichaMpya);
+            $this->deletePicha($chetiMpya);
             throw $exception;
         }
 
@@ -146,14 +162,14 @@ class WalipuajiController extends Controller
     {
         $mlipuzi->load(['company', 'mwenyeBc']);
         $url = $mlipuzi->thibitishoUrl();
-        $bc = trim((string) $mlipuzi->bcInayotumika());
+        $usajili = trim((string) $mlipuzi->namba_ya_usajili);
 
         return view('milipuko.walipuaji.kitambulisho', [
             'mlipuzi' => $mlipuzi,
             'thibitishoUrl' => $url,
             'qr' => $this->qrDataUri($url),
-            'bc' => $bc,
-            'barcode' => $bc !== '' ? $this->barcodeDataUri($bc) : null,
+            'usajili' => $usajili,
+            'barcode' => $usajili !== '' ? $this->barcodeDataUri($usajili) : null,
             'appName' => SystemSettingService::get('app_name', 'M-ERP'),
         ]);
     }
@@ -309,6 +325,17 @@ class WalipuajiController extends Controller
 
         $validated = $request->validate([
             'jina' => ['required', 'string', 'max:255'],
+            'namba_ya_usajili' => [
+                'required',
+                'string',
+                'max:100',
+                Rule::unique('walipuaji', 'namba_ya_usajili')
+                    ->where(fn ($query) => $query->where('company_id', $companyId))
+                    ->ignore($mlipuzi?->id),
+            ],
+            'jinsia' => ['required', Rule::in(['me', 'ke'])],
+            'tarehe_ya_kuzaliwa' => ['nullable', 'date', 'before_or_equal:today'],
+            'cheti_cha_milipuko' => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png,webp', 'max:5120'],
             'hali' => ['required', Rule::in(['active', 'blocked'])],
             'aina_ya_bc' => ['required', Rule::in(['yake', 'mtu'])],
             'bc_no' => [
@@ -343,6 +370,14 @@ class WalipuajiController extends Controller
             'wawasiliani.*.uhusiano' => ['nullable', 'string', 'max:100'],
         ], [
             'jina.required' => 'Jina linahitajika.',
+            'namba_ya_usajili.required' => 'Namba ya usajili inahitajika.',
+            'namba_ya_usajili.unique' => 'Namba hii ya usajili tayari imesajiliwa.',
+            'jinsia.required' => 'Chagua jinsia.',
+            'jinsia.in' => 'Chagua Me au Ke.',
+            'tarehe_ya_kuzaliwa.date' => 'Tarehe ya kuzaliwa si sahihi.',
+            'tarehe_ya_kuzaliwa.before_or_equal' => 'Tarehe ya kuzaliwa haiwezi kuwa ya baadaye.',
+            'cheti_cha_milipuko.mimes' => 'Cheti cha milipuko kiwe PDF au picha.',
+            'cheti_cha_milipuko.max' => 'Cheti kisizidi MB 5.',
             'hali.required' => 'Chagua hali.',
             'hali.in' => 'Hali iliyochaguliwa haipo.',
             'aina_ya_bc.required' => 'Chagua kama anatumia BC No. yake au ya mtu.',
@@ -384,6 +419,9 @@ class WalipuajiController extends Controller
 
         return [
             'jina' => trim($validated['jina']),
+            'namba_ya_usajili' => trim($validated['namba_ya_usajili']),
+            'jinsia' => $validated['jinsia'],
+            'tarehe_ya_kuzaliwa' => $validated['tarehe_ya_kuzaliwa'] ?? null,
             'hali' => $validated['hali'],
             'aina_ya_bc' => $validated['aina_ya_bc'],
             'bc_no' => $anatumiaYake ? trim((string) $validated['bc_no']) : null,
@@ -520,6 +558,15 @@ class WalipuajiController extends Controller
         }
 
         return $request->file('picha')->store('walipuaji', 'public');
+    }
+
+    private function storeCheti(Request $request): ?string
+    {
+        if (! $request->hasFile('cheti_cha_milipuko')) {
+            return null;
+        }
+
+        return $request->file('cheti_cha_milipuko')->store('walipuaji/vyeti', 'public');
     }
 
     private function deletePicha(?string $path): void

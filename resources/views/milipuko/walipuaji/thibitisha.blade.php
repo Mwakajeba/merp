@@ -66,9 +66,10 @@
                 <img class="photo" src="{{ $mlipuzi->pichaUrl() }}" alt="{{ $mlipuzi->jina }}">
             @endif
             <h1>{{ $mlipuzi->jina }}</h1>
-            <p>BC No. {{ $mlipuzi->bcInayotumika() ?: '—' }}</p>
-            @if($mlipuzi->aina_ya_bc === 'mtu' && $mlipuzi->mwenyeBc)
-                <p>Ya {{ $mlipuzi->mwenyeBc->jina }}</p>
+            <p>Namba ya usajili {{ $mlipuzi->namba_ya_usajili ?: '—' }}</p>
+            <p>Jinsia: {{ $mlipuzi->jinsiaLabel() ?: '—' }}</p>
+            @if($mlipuzi->umri() !== null)
+                <p>Umri: {{ $mlipuzi->umri() }} miaka</p>
             @endif
             <p>{{ $mlipuzi->mkoa }}, {{ $mlipuzi->wilaya }}</p>
             @if($mlipuzi->hali === 'blocked')

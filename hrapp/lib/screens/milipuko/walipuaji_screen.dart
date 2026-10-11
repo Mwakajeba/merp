@@ -46,7 +46,7 @@ class _WalipuajiScreenState extends State<WalipuajiScreen> {
   @override
   Widget build(BuildContext context) {
     final orodha = _walipuaji.where((m) {
-      final jina = '${m['jina'] ?? ''} ${m['bc_no'] ?? ''}'.toLowerCase();
+      final jina = '${m['jina'] ?? ''} ${m['namba_ya_usajili'] ?? ''} ${m['bc_no'] ?? ''}'.toLowerCase();
       return jina.contains(_tafuta.toLowerCase());
     }).toList();
 
@@ -74,7 +74,7 @@ class _WalipuajiScreenState extends State<WalipuajiScreen> {
                   padding: const EdgeInsets.all(12),
                   child: TextField(
                     decoration: const InputDecoration(
-                      labelText: 'Tafuta jina au BC',
+                      labelText: 'Tafuta jina, usajili au BC',
                       prefixIcon: Icon(Icons.search),
                       filled: true,
                       fillColor: Colors.white,
@@ -104,7 +104,7 @@ class _WalipuajiScreenState extends State<WalipuajiScreen> {
                                   child: picha.isEmpty ? const Icon(Icons.person) : null,
                                 ),
                                 title: Text((mtu['jina'] ?? '').toString(), style: const TextStyle(fontWeight: FontWeight.w700)),
-                                subtitle: Text('${mtu['bc_no'] ?? '—'} · ${mtu['simu'] ?? ''}'),
+                                subtitle: Text('${mtu['namba_ya_usajili'] ?? '—'} · ${mtu['simu'] ?? ''}'),
                                 trailing: Icon(Icons.circle, size: 12, color: amefungwa ? const Color(0xFFB42318) : const Color(0xFF0B6E4F)),
                                 onTap: () {
                                   final id = int.tryParse('${mtu['id']}');

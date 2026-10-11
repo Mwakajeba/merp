@@ -341,6 +341,15 @@ class MilipukoMobileController extends Controller
 
         $validated = $request->validate([
             'jina' => ['required', 'string', 'max:255'],
+            'namba_ya_usajili' => [
+                'required',
+                'string',
+                'max:100',
+                Rule::unique('walipuaji', 'namba_ya_usajili')->where(fn ($query) => $query->where('company_id', $companyId)),
+            ],
+            'jinsia' => ['required', Rule::in(['me', 'ke'])],
+            'tarehe_ya_kuzaliwa' => ['nullable', 'date', 'before_or_equal:today'],
+            'cheti_cha_milipuko' => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png,webp', 'max:5120'],
             'hali' => ['required', Rule::in(['active', 'blocked'])],
             'aina_ya_bc' => ['required', Rule::in(['yake', 'mtu'])],
             'bc_no' => [
@@ -367,6 +376,14 @@ class MilipukoMobileController extends Controller
             'mwasiliano_uhusiano' => ['nullable', 'string', 'max:100'],
         ], [
             'jina.required' => 'Jina linahitajika.',
+            'namba_ya_usajili.required' => 'Namba ya usajili inahitajika.',
+            'namba_ya_usajili.unique' => 'Namba hii ya usajili tayari imesajiliwa.',
+            'jinsia.required' => 'Chagua jinsia.',
+            'jinsia.in' => 'Chagua Me au Ke.',
+            'tarehe_ya_kuzaliwa.date' => 'Tarehe ya kuzaliwa si sahihi.',
+            'tarehe_ya_kuzaliwa.before_or_equal' => 'Tarehe ya kuzaliwa haiwezi kuwa ya baadaye.',
+            'cheti_cha_milipuko.mimes' => 'Cheti cha milipuko kiwe PDF au picha.',
+            'cheti_cha_milipuko.max' => 'Cheti kisizidi MB 5.',
             'bc_no.required' => 'BC No. inahitajika.',
             'bc_no.unique' => 'BC No. hii tayari imesajiliwa.',
             'bc_ya_mlipuzi_id.required' => 'Chagua mwenye BC No.',
@@ -397,6 +414,9 @@ class MilipukoMobileController extends Controller
             'company_id' => $companyId,
             'branch_id' => $this->branchId($request, $user),
             'jina' => trim($validated['jina']),
+            'namba_ya_usajili' => trim($validated['namba_ya_usajili']),
+            'jinsia' => $validated['jinsia'],
+            'tarehe_ya_kuzaliwa' => $validated['tarehe_ya_kuzaliwa'] ?? null,
             'hali' => $validated['hali'],
             'aina_ya_bc' => $validated['aina_ya_bc'],
             'bc_no' => $anatumiaYake ? trim((string) $validated['bc_no']) : null,
@@ -407,6 +427,7 @@ class MilipukoMobileController extends Controller
             'wilaya' => $validated['wilaya'],
             'eneo' => trim((string) ($validated['eneo'] ?? '')) ?: null,
             'picha' => $request->file('picha')?->store('walipuaji', 'public'),
+            'cheti_cha_milipuko' => $request->file('cheti_cha_milipuko')?->store('walipuaji/vyeti', 'public'),
             'created_by' => $user->id,
         ]);
 
@@ -743,6 +764,10 @@ class MilipukoMobileController extends Controller
         return [
             'id' => $mtu->id,
             'jina' => $mtu->jina,
+            'namba_ya_usajili' => $mtu->namba_ya_usajili,
+            'jinsia' => $mtu->jinsia,
+            'jinsia_label' => $mtu->jinsiaLabel(),
+            'umri' => $mtu->umri(),
             'bc_no' => $mtu->bcInayotumika(),
             'hali' => $mtu->hali,
             'aina_ya_bc' => $mtu->aina_ya_bc,
@@ -756,6 +781,8 @@ class MilipukoMobileController extends Controller
     {
         return array_merge($this->mlipuziFupi($mtu), [
             'simu_mbadala' => $mtu->simu_mbadala,
+            'tarehe_ya_kuzaliwa' => $mtu->tarehe_ya_kuzaliwa?->format('d/m/Y'),
+            'cheti' => $mtu->chetiUrl(),
             'mkoa' => $mtu->mkoa,
             'wilaya' => $mtu->wilaya,
             'eneo' => $mtu->eneo,

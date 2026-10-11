@@ -184,8 +184,8 @@
             <div class="id-main">
                 <div>
                     <p class="id-kicker">KITAMBULISHO CHA MLIPUAJI</p>
-                    @if($bc !== '')
-                        <p class="id-bc">{{ $bc }}</p>
+                    @if($usajili !== '')
+                        <p class="id-bc">{{ $usajili }}</p>
                     @endif
                 </div>
                 <div class="id-body">
@@ -196,7 +196,7 @@
                     @endif
                     <div class="id-meta">
                         <p><span class="kichwa">Jina:</span> <span class="thamani">{{ $mlipuzi->jina }}</span></p>
-                        <p><span class="kichwa">Jinsia:</span> <span class="thamani">ME</span></p>
+                        <p><span class="kichwa">Jinsia:</span> <span class="thamani">{{ $mlipuzi->jinsiaLabel() ?: '—' }}</span></p>
                         <p><span class="kichwa">Simu:</span> <span class="thamani">{{ $mlipuzi->simu }}</span></p>
                         <p><span class="kichwa">Mkoa:</span> <span class="thamani">{{ $mlipuzi->mkoa }}</span></p>
                         <p><span class="kichwa">Wilaya:</span> <span class="thamani">{{ $mlipuzi->wilaya }}</span></p>
@@ -207,7 +207,7 @@
                 </div>
                 @if($barcode)
                     <div class="id-barcode">
-                        <img src="{{ $barcode }}" alt="Barcode ya {{ $bc }}">
+                        <img src="{{ $barcode }}" alt="Barcode ya {{ $usajili }}">
                     </div>
                 @endif
             </div>

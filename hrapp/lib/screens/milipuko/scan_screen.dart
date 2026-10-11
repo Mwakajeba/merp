@@ -175,7 +175,9 @@ class _ScanScreenState extends State<ScanScreen> {
     if (!siAinaSahihi && mtu != null) {
       mistari.addAll([
         MapEntry('Jina', '${mtu['jina'] ?? '—'}'),
-        MapEntry('BC No.', '${mtu['bc_no'] ?? '—'}'),
+        MapEntry('Namba ya usajili', '${mtu['namba_ya_usajili'] ?? '—'}'),
+        MapEntry('Jinsia', '${(mtu['jinsia_label'] ?? '').toString().isEmpty ? '—' : mtu['jinsia_label']}'),
+        if (mtu['umri'] != null) MapEntry('Umri', '${mtu['umri']} miaka'),
         MapEntry('Hali', mtu['amefungwa'] == true ? 'Blocked' : 'Active'),
         MapEntry('Simu', '${mtu['simu'] ?? '—'}'),
       ]);

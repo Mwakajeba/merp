@@ -46,7 +46,7 @@ class _PichaScreenState extends State<PichaScreen> {
   @override
   Widget build(BuildContext context) {
     final orodha = _walipuaji.where((m) {
-      final jina = '${m['jina'] ?? ''} ${m['bc_no'] ?? ''}'.toLowerCase();
+      final jina = '${m['jina'] ?? ''} ${m['namba_ya_usajili'] ?? ''} ${m['bc_no'] ?? ''}'.toLowerCase();
       return jina.contains(_tafuta.toLowerCase());
     }).toList();
 
@@ -76,7 +76,7 @@ class _PichaScreenState extends State<PichaScreen> {
                           child: picha.isEmpty ? const Icon(Icons.person) : null,
                         ),
                         title: Text((mtu['jina'] ?? '').toString()),
-                        subtitle: Text('${mtu['bc_no'] ?? '—'} · ${mtu['hali'] ?? ''}'),
+                        subtitle: Text('${mtu['namba_ya_usajili'] ?? '—'} · ${mtu['hali'] ?? ''}'),
                         trailing: IconButton(icon: const Icon(Icons.photo_camera), onPressed: () => _piga(mtu)),
                       );
                     },

@@ -363,25 +363,184 @@ class BackupService
      */
     protected function restoreDatabaseBackup($filePath)
     {
-        $database = config('database.connections.mysql.database');
-        $username = config('database.connections.mysql.username');
-        $password = config('database.connections.mysql.password');
-        $host = config('database.connections.mysql.host');
-        $port = config('database.connections.mysql.port');
-
-        $command = "mysql -h {$host} -P {$port} -u {$username}";
-        if ($password) {
-            $command .= " -p{$password}";
-        }
-        $command .= " {$database} < {$filePath}";
-
-        exec($command, $output, $returnCode);
-
-        if ($returnCode !== 0) {
-            throw new \Exception('Database restore failed');
-        }
+        $this->importSqlIntoLocalDatabase($filePath);
 
         return true;
+    }
+
+    /**
+     * SQL dumps that can be imported without going through the PHP upload limit.
+     */
+    public function availableSqlImports(): array
+    {
+        $directory = storage_path('app/sql-imports');
+        if (!is_dir($directory)) {
+            mkdir($directory, 0755, true);
+        }
+
+        $files = [];
+        foreach (File::files($directory) as $file) {
+            $name = $file->getFilename();
+            if (!preg_match('/\.sql(\.gz)?$/i', $name)) {
+                continue;
+            }
+
+            $files[] = [
+                'name' => $name,
+                'size' => $file->getSize(),
+                'modified' => $file->getMTime(),
+            ];
+        }
+
+        usort($files, fn (array $a, array $b) => $b['modified'] <=> $a['modified']);
+
+        return $files;
+    }
+
+    /**
+     * Resolve a dump placed in storage/app/sql-imports.
+     */
+    public function resolveSqlImportFile(string $filename): string
+    {
+        $directory = storage_path('app/sql-imports');
+        if (!is_dir($directory)) {
+            mkdir($directory, 0755, true);
+        }
+
+        $basename = basename($filename);
+        if (!preg_match('/\.sql(\.gz)?$/i', $basename)) {
+            throw new \InvalidArgumentException('Only .sql and .sql.gz files can be imported.');
+        }
+
+        $directoryReal = realpath($directory);
+        $fileReal = realpath($directory . DIRECTORY_SEPARATOR . $basename);
+        if ($directoryReal === false || $fileReal === false || !str_starts_with($fileReal, $directoryReal . DIRECTORY_SEPARATOR)) {
+            throw new \InvalidArgumentException('SQL file was not found in storage/app/sql-imports.');
+        }
+
+        return $fileReal;
+    }
+
+    /**
+     * Import a .sql or .sql.gz dump into the local database.
+     * CREATE DATABASE and USE statements are skipped so an online dump
+     * lands in this installation's database.
+     */
+    public function importSqlIntoLocalDatabase(string $filePath): void
+    {
+        if (!is_file($filePath)) {
+            throw new \Exception('SQL file not found.');
+        }
+
+        $database = (string) config('database.connections.mysql.database');
+        $username = (string) config('database.connections.mysql.username');
+        $password = (string) config('database.connections.mysql.password');
+        $host = (string) config('database.connections.mysql.host');
+        $port = (string) config('database.connections.mysql.port');
+
+        if ($database === '' || $username === '' || $host === '') {
+            throw new \Exception('Local database connection is not configured.');
+        }
+
+        $configFile = storage_path('app/temp/mysql-import-' . Str::uuid() . '.cnf');
+        File::ensureDirectoryExists(dirname($configFile));
+        File::put($configFile, implode("\n", [
+            '[client]',
+            'host=' . $this->mysqlConfigValue($host),
+            'port=' . (int) $port,
+            'user=' . $this->mysqlConfigValue($username),
+            'password=' . $this->mysqlConfigValue($password),
+            '',
+        ]));
+        chmod($configFile, 0600);
+
+        $streamPath = str_ends_with(strtolower($filePath), '.gz')
+            ? 'compress.zlib://' . $filePath
+            : $filePath;
+        $input = fopen($streamPath, 'rb');
+        if ($input === false) {
+            File::delete($configFile);
+            throw new \Exception('Could not read the SQL file.');
+        }
+
+        $command = sprintf(
+            'mysql --defaults-extra-file=%s --binary-mode %s',
+            escapeshellarg($configFile),
+            escapeshellarg($database)
+        );
+
+        $errorLog = storage_path('app/temp/mysql-import-' . Str::uuid() . '.log');
+        $process = proc_open($command, [
+            0 => ['pipe', 'r'],
+            1 => ['file', '/dev/null', 'w'],
+            2 => ['file', $errorLog, 'w'],
+        ], $pipes);
+
+        if (!is_resource($process)) {
+            fclose($input);
+            File::delete($configFile);
+            throw new \Exception('Could not start the mysql client. Confirm the mysql command is installed.');
+        }
+
+        $writeError = null;
+        try {
+            $this->writeToMysqlPipe($pipes[0], "SET FOREIGN_KEY_CHECKS=0;\nSET UNIQUE_CHECKS=0;\nSET SQL_MODE='NO_AUTO_VALUE_ON_ZERO';\n");
+
+            while (!feof($input)) {
+                $line = fgets($input);
+                if ($line === false) {
+                    break;
+                }
+
+                $trimmed = ltrim($line);
+                if (preg_match('/^(CREATE\s+DATABASE|USE)\b/i', $trimmed)) {
+                    continue;
+                }
+
+                $this->writeToMysqlPipe($pipes[0], $line);
+            }
+
+            $this->writeToMysqlPipe($pipes[0], "\nSET FOREIGN_KEY_CHECKS=1;\nSET UNIQUE_CHECKS=1;\n");
+        } catch (\Exception $e) {
+            $writeError = $e;
+        } finally {
+            fclose($input);
+            if (isset($pipes[0]) && is_resource($pipes[0])) {
+                fclose($pipes[0]);
+            }
+        }
+
+        $exitCode = proc_close($process);
+        $errorOutput = File::exists($errorLog) ? File::get($errorLog) : '';
+        File::delete([$configFile, $errorLog]);
+
+        if ($exitCode !== 0) {
+            $message = trim((string) $errorOutput);
+            throw new \Exception($message !== '' ? 'Database import failed: ' . $message : 'Database import failed.');
+        }
+
+        if ($writeError) {
+            throw $writeError;
+        }
+    }
+
+    protected function mysqlConfigValue(string $value): string
+    {
+        return '"' . str_replace(['\\', '"', "\n", "\r"], ['\\\\', '\\"', '', ''], $value) . '"';
+    }
+
+    protected function writeToMysqlPipe($pipe, string $data): void
+    {
+        $length = strlen($data);
+        $written = 0;
+
+        while ($written < $length) {
+            $result = fwrite($pipe, substr($data, $written));
+            if ($result === false) {
+                throw new \Exception('The mysql client stopped before the SQL file finished importing.');
+            }
+            $written += $result;
+        }
     }
 
     /**

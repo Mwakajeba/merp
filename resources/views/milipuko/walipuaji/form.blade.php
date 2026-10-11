@@ -21,6 +21,8 @@
     $ainaYaBc = old('aina_ya_bc', $mlipuzi->aina_ya_bc ?? 'yake');
     $hali = old('hali', $mlipuzi->hali ?? 'active');
     $mwenyeBcId = old('bc_ya_mlipuzi_id', $mlipuzi->bc_ya_mlipuzi_id ?? '');
+    $jinsia = old('jinsia', $mlipuzi->jinsia ?? 'me');
+    $tareheYaKuzaliwa = old('tarehe_ya_kuzaliwa', isset($mlipuzi) && $mlipuzi->tarehe_ya_kuzaliwa ? $mlipuzi->tarehe_ya_kuzaliwa->format('Y-m-d') : '');
 @endphp
 
 @if ($errors->any())
@@ -43,6 +45,22 @@
         <div class="col-md-6 mb-3">
             <label for="jina" class="form-label">Jina <span class="text-danger">*</span></label>
             <input type="text" name="jina" id="jina" value="{{ old('jina', $mlipuzi->jina ?? '') }}" class="form-control" required>
+        </div>
+        <div class="col-md-6 mb-3">
+            <label for="namba_ya_usajili" class="form-label">Namba ya Usajili <span class="text-danger">*</span></label>
+            <input type="text" name="namba_ya_usajili" id="namba_ya_usajili" value="{{ old('namba_ya_usajili', $mlipuzi->namba_ya_usajili ?? '') }}" class="form-control" required>
+        </div>
+        <div class="col-md-6 mb-3">
+            <label for="jinsia" class="form-label">Jinsia <span class="text-danger">*</span></label>
+            <select name="jinsia" id="jinsia" class="form-select" required>
+                <option value="me" @selected($jinsia === 'me')>Me</option>
+                <option value="ke" @selected($jinsia === 'ke')>Ke</option>
+            </select>
+        </div>
+        <div class="col-md-6 mb-3">
+            <label for="tarehe_ya_kuzaliwa" class="form-label">Tarehe ya kuzaliwa</label>
+            <input type="date" name="tarehe_ya_kuzaliwa" id="tarehe_ya_kuzaliwa" value="{{ $tareheYaKuzaliwa }}" class="form-control" max="{{ now()->toDateString() }}">
+            <div class="form-text">Si lazima. Ikiwekwa, umri utaonekana kwenye wasifu.</div>
         </div>
         <div class="col-md-6 mb-3">
             <label for="hali" class="form-label">Hali <span class="text-danger">*</span></label>
@@ -102,6 +120,15 @@
             <select name="wilaya" id="wilaya" class="form-select" required>
                 <option value="">Chagua mkoa kwanza</option>
             </select>
+        </div>
+        <div class="col-md-6 mb-3">
+            <label for="cheti_cha_milipuko" class="form-label">Cheti cha Milipuko</label>
+            <input type="file" name="cheti_cha_milipuko" id="cheti_cha_milipuko" class="form-control" accept="application/pdf,image/jpeg,image/png,image/webp">
+            @if($isEdit && $mlipuzi->chetiUrl())
+                <div class="form-text"><a href="{{ $mlipuzi->chetiUrl() }}" target="_blank" rel="noopener">Angalia cheti kilichopo</a></div>
+            @else
+                <div class="form-text">PDF au picha. Si lazima.</div>
+            @endif
         </div>
         <div class="col-md-6 mb-3">
             <label for="picha" class="form-label">Picha</label>
