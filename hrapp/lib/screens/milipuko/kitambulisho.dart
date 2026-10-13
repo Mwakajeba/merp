@@ -8,6 +8,9 @@ import 'package:printing/printing.dart';
 import '../../services/milipuko_service.dart';
 
 const _kijani = PdfColor.fromInt(0xFF0B6E4F);
+const _machungwa = PdfColor.fromInt(0xFFE85D04);
+
+bool _niUsajiliWaMs(String usajili) => RegExp(r'^MS\.\d{4}$', caseSensitive: false).hasMatch(usajili.trim());
 
 Future<Uint8List> jengaKitambulisho(Map<String, dynamic> mtu) async {
   final jina = (mtu['jina'] ?? '').toString();
@@ -32,7 +35,7 @@ Future<Uint8List> jengaKitambulisho(Map<String, dynamic> mtu) async {
         return pw.Column(
           children: [
             pw.Container(
-              color: _kijani,
+              color: _niUsajiliWaMs(usajili) ? _machungwa : _kijani,
               padding: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               child: pw.Row(
                 children: [

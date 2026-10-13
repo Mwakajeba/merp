@@ -62,6 +62,7 @@
             font-size: 9px;
             letter-spacing: 0.04em;
         }
+        .id-head-ms { background: #e85d04; }
         .id-head strong { font-size: 11px; }
         .id-main {
             flex: 1;
@@ -177,7 +178,7 @@
     <div class="stage">
         <p class="upande no-print">Mbele</p>
         <article class="id-card">
-            <header class="id-head">
+            <header class="id-head{{ preg_match('/^MS\.\d{4}$/i', $usajili) ? ' id-head-ms' : '' }}">
                 <strong>MILIPUKO</strong>
                 <span>{{ $mlipuzi->company->name ?? '' }}</span>
             </header>

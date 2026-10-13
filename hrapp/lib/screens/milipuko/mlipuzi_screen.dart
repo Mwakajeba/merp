@@ -170,7 +170,9 @@ class _KadiMbele extends StatelessWidget {
         child: Column(
           children: [
             Container(
-              color: const Color(0xFF0B6E4F),
+              color: RegExp(r'^MS\.\d{4}$', caseSensitive: false).hasMatch(usajili)
+                  ? const Color(0xFFE85D04)
+                  : const Color(0xFF0B6E4F),
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
               child: Row(
                 children: [
