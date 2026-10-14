@@ -135,23 +135,43 @@
         .id-barcode { text-align: center; }
         .id-barcode img { width: 72mm; height: 8mm; object-fit: fill; }
         .id-back {
+            position: relative;
+            padding: 0;
+            background: #fff;
+        }
+        .muhuri {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+        .maneno {
+            position: relative;
+            z-index: 1;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
             align-items: center;
             justify-content: center;
             text-align: center;
-            padding: 3mm 4mm;
-            gap: 1mm;
+            padding: 3mm 7mm;
         }
         .sahihi-mstari {
-            width: 46mm;
-            border-top: 0.35mm solid #1b2430;
-            margin: 3mm 0 1.2mm;
+            width: 52mm;
+            border-top: 0.6mm solid #1b2430;
+            margin: 2.2mm 0 1mm;
         }
-        .id-back p {
+        .maneno p {
             margin: 0;
             font-size: 7.5px;
             line-height: 1.25;
         }
-        .id-back .tofauti {
+        .maneno .ukiokota {
+            font-size: 9.5px;
+            font-weight: 700;
+        }
+        .maneno .tofauti {
             font-size: 8px;
             font-weight: 700;
         }
@@ -217,12 +237,37 @@
     <div class="stage">
         <p class="upande no-print">Nyuma</p>
         <article class="id-card id-back">
-            <p class="tofauti">Kimetolewa na Idara ya Milipuko</p>
-            <p class="tofauti">Msasa Gold Mine</p>
-            <p>S.L.P 02 BUKOMBE, GEITA</p>
-            <p>Ukikiokota tafadhali wasiliana nasi kupitia {{ filled($mlipuzi->company?->phone) ? $mlipuzi->company->phone : '—' }}</p>
-            <div class="sahihi-mstari"></div>
-            <p class="katibu">KATIBU WA IDARA</p>
+            <svg class="muhuri" viewBox="0 0 856 540" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+                <defs>
+                    <radialGradient id="fifia" cx="50%" cy="50%" r="50%">
+                        <stop offset="0%" stop-color="#2F6FAD" stop-opacity="0.30"/>
+                        <stop offset="55%" stop-color="#5B93C4" stop-opacity="0.14"/>
+                        <stop offset="100%" stop-color="#2F6FAD" stop-opacity="0"/>
+                    </radialGradient>
+                    <path id="mzunguko-juu" d="M 255.3,165.2 A 202,202 0 0 1 600.7,165.2"/>
+                    <path id="mzunguko-chini" d="M 245.8,357.1 A 202,202 0 0 0 610.2,357.1"/>
+                </defs>
+                <rect width="856" height="540" fill="#ffffff"/>
+                <circle cx="428" cy="270" r="248" fill="url(#fifia)" stroke="#1A4F8C" stroke-opacity="0.42" stroke-width="6"/>
+                <circle cx="428" cy="270" r="231" fill="none" stroke="#1A4F8C" stroke-opacity="0.42" stroke-width="2"/>
+                <circle cx="428" cy="270" r="174" fill="none" stroke="#1A4F8C" stroke-opacity="0.42" stroke-width="2.5"/>
+                <polygon points="630,260 638,270 630,280 622,270" fill="#1A4F8C" fill-opacity="0.42"/>
+                <polygon points="226,260 234,270 226,280 218,270" fill="#1A4F8C" fill-opacity="0.42"/>
+                <text fill="#1A4F8C" fill-opacity="0.5" font-family="Arial, Helvetica, sans-serif" font-size="34" font-weight="700" dominant-baseline="middle">
+                    <textPath href="#mzunguko-juu" xlink:href="#mzunguko-juu" startOffset="50%" text-anchor="middle">IDARA YA MILIPUKO</textPath>
+                </text>
+                <text fill="#1A4F8C" fill-opacity="0.5" font-family="Arial, Helvetica, sans-serif" font-size="32" font-weight="700" dominant-baseline="middle">
+                    <textPath href="#mzunguko-chini" xlink:href="#mzunguko-chini" startOffset="50%" text-anchor="middle">KATIBU WA MABLASTA</textPath>
+                </text>
+            </svg>
+            <div class="maneno">
+                <p class="tofauti">Kimetolewa na Idara ya Milipuko</p>
+                <p class="tofauti">Msasa Gold Mine</p>
+                <p>S.L.P 02 BUKOMBE, GEITA</p>
+                <p class="ukiokota">Ukikiokota tafadhali wasiliana nasi kupitia {{ filled($mlipuzi->company?->phone) ? $mlipuzi->company->phone : '—' }}</p>
+                <div class="sahihi-mstari"></div>
+                <p class="katibu">KATIBU WA IDARA</p>
+            </div>
         </article>
     </div>
 </body>
