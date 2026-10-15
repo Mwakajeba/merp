@@ -4,7 +4,7 @@ namespace App\Services\Milipuko;
 
 class PichaMandhariNyeupe
 {
-    public function jpeg(string $bytes): ?string
+    public function png(string $bytes): ?string
     {
         $src = @imagecreatefromstring($bytes);
         if ($src === false) {
@@ -19,40 +19,46 @@ class PichaMandhariNyeupe
             return null;
         }
 
-        $max = 640;
+        $max = 420;
         $scale = min(1.0, $max / max($sw, $sh));
         $w = max(2, (int) round($sw * $scale));
         $h = max(2, (int) round($sh * $scale));
-
-        $img = imagecreatetruecolor($w, $h);
-        $white = imagecolorallocate($img, 255, 255, 255);
-        imagefilledrectangle($img, 0, 0, $w - 1, $h - 1, $white);
-        imagecopyresampled($img, $src, 0, 0, 0, 0, $w, $h, $sw, $sh);
-        imagedestroy($src);
+        $ndogo = imagecreatetruecolor($w, $h);
+        imagecopyresampled($ndogo, $src, 0, 0, 0, 0, $w, $h, $sw, $sh);
 
         $pixels = [];
         for ($y = 0; $y < $h; $y++) {
             for ($x = 0; $x < $w; $x++) {
-                $pixels[] = imagecolorat($img, $x, $y) & 0xFFFFFF;
+                $pixels[] = imagecolorat($ndogo, $x, $y) & 0xFFFFFF;
             }
         }
+        imagedestroy($ndogo);
 
         $bg = $this->rangiYaUkingo($pixels, $w, $h);
         $mask = $this->maskYaMandhari($pixels, $w, $h, $bg);
-        $n = $w * $h;
         $imeondolewa = substr_count($mask, "\1");
 
-        if ($imeondolewa > 0 && $imeondolewa < (int) ($n * 0.82)) {
-            for ($i = 0; $i < $n; $i++) {
-                if ($mask[$i] === "\1") {
-                    imagesetpixel($img, $i % $w, intdiv($i, $w), $white);
+        if ($imeondolewa === 0 || $imeondolewa >= (int) ($w * $h * 0.82)) {
+            imagedestroy($src);
+
+            return null;
+        }
+
+        $nyeupe = imagecolorallocate($src, 255, 255, 255);
+        for ($y = 0; $y < $sh; $y++) {
+            $sy = min($h - 1, intdiv($y * $h, $sh));
+            $mstari = $sy * $w;
+            for ($x = 0; $x < $sw; $x++) {
+                $sx = min($w - 1, intdiv($x * $w, $sw));
+                if ($mask[$mstari + $sx] === "\1") {
+                    imagesetpixel($src, $x, $y, $nyeupe);
                 }
             }
         }
 
         ob_start();
-        imagejpeg($img, null, 92);
-        imagedestroy($img);
+        imagepng($src, null, 6);
+        imagedestroy($src);
 
         return ob_get_clean() ?: null;
     }
@@ -84,9 +90,8 @@ class PichaMandhariNyeupe
 
         arsort($hesabu);
         $ndoo = (int) array_key_first($hesabu);
-        $rangi = $sampuli[$ndoo];
         $rs = $gs = $bs = [];
-        foreach ($rangi as $c) {
+        foreach ($sampuli[$ndoo] as $c) {
             $rs[] = ($c >> 16) & 255;
             $gs[] = ($c >> 8) & 255;
             $bs[] = $c & 255;
@@ -108,7 +113,7 @@ class PichaMandhariNyeupe
         $n = $w * $h;
         $seen = str_repeat("\0", $n);
         $mask = str_repeat("\0", $n);
-        $kikomo = 80 * 80;
+        $kikomo = 68 * 68;
         $queue = [];
 
         for ($x = 0; $x < $w; $x++) {
@@ -153,34 +158,6 @@ class PichaMandhariNyeupe
             if ($y < $h - 1) {
                 $queue[] = $i + $w;
             }
-        }
-
-        $upeo = 96 * 96;
-        $nyongeza = [];
-        for ($y = 0; $y < $h; $y++) {
-            for ($x = 0; $x < $w; $x++) {
-                $i = $y * $w + $x;
-                if ($mask[$i] === "\1") {
-                    continue;
-                }
-                $karibu = ($x > 0 && $mask[$i - 1] === "\1")
-                    || ($x < $w - 1 && $mask[$i + 1] === "\1")
-                    || ($y > 0 && $mask[$i - $w] === "\1")
-                    || ($y < $h - 1 && $mask[$i + $w] === "\1");
-                if (! $karibu) {
-                    continue;
-                }
-                $c = $pixels[$i];
-                $dr = (($c >> 16) & 255) - $br;
-                $dg = (($c >> 8) & 255) - $bgG;
-                $db = ($c & 255) - $bb;
-                if (($dr * $dr) + ($dg * $dg) + ($db * $db) <= $upeo) {
-                    $nyongeza[] = $i;
-                }
-            }
-        }
-        foreach ($nyongeza as $i) {
-            $mask[$i] = "\1";
         }
 
         return $mask;
