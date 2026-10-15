@@ -140,6 +140,7 @@ use App\Http\Controllers\BankAccountController;
 // use App\Http\Controllers\ProductionBatchController; // Controller missing - commented out
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\MilipukoController;
+use App\Http\Controllers\Milipuko\KompresaController;
 use App\Http\Controllers\Milipuko\MaduaraController;
 use App\Http\Controllers\Milipuko\TaarifaController;
 use App\Http\Controllers\Milipuko\VibaliController;
@@ -227,6 +228,18 @@ Route::get('/dashboard', [DashboardController::class, 'index'])->middleware(['au
 Route::get('/milipuko', [MilipukoController::class, 'index'])->middleware(['auth', 'require.branch'])->name('milipuko.index');
 Route::get('/milipuko/taarifa', [TaarifaController::class, 'index'])->middleware(['auth', 'company.scope', 'require.branch'])->name('milipuko.taarifa.index');
 Route::get('/milipuko/taarifa/pdf', [TaarifaController::class, 'pdf'])->middleware(['auth', 'company.scope', 'require.branch'])->name('milipuko.taarifa.pdf');
+Route::prefix('milipuko/kompresa')->name('milipuko.kompresa.')->middleware(['auth', 'company.scope', 'require.branch'])->group(function () {
+    Route::get('/', [KompresaController::class, 'index'])->name('index');
+    Route::get('/data', [KompresaController::class, 'data'])->name('data');
+    Route::get('/create', [KompresaController::class, 'create'])->name('create');
+    Route::post('/', [KompresaController::class, 'store'])->name('store');
+    Route::get('/{kompresa}/cheti/pdf', [KompresaController::class, 'chetiPdf'])->name('cheti.pdf');
+    Route::get('/{kompresa}/cheti', [KompresaController::class, 'cheti'])->name('cheti');
+    Route::get('/{kompresa}/edit', [KompresaController::class, 'edit'])->name('edit');
+    Route::put('/{kompresa}', [KompresaController::class, 'update'])->name('update');
+    Route::delete('/{kompresa}', [KompresaController::class, 'destroy'])->name('destroy');
+    Route::get('/{kompresa}', [KompresaController::class, 'show'])->name('show');
+});
 Route::prefix('milipuko/maduara')->name('milipuko.maduara.')->middleware(['auth', 'company.scope', 'require.branch'])->group(function () {
     Route::get('/', [MaduaraController::class, 'index'])->name('index');
     Route::get('/data', [MaduaraController::class, 'data'])->name('data');

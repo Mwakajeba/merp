@@ -98,6 +98,21 @@
                             </div>
 
                             <div class="col-md-6 col-lg-4 mb-4">
+                                <div class="card border-dark milipuko-card h-100">
+                                    <div class="card-body text-center">
+                                        <div class="mb-3">
+                                            <i class="bx bx-cog fs-1 text-dark"></i>
+                                        </div>
+                                        <h5 class="card-title">Usajili wa Kompresa</h5>
+                                        <p class="card-text">Sajili mmiliki wa kompresa, kisha chapisha cheti cha usajili kwa A4.</p>
+                                        <a href="{{ route('milipuko.kompresa.index') }}" class="btn btn-dark">
+                                            <i class="bx bx-cog me-1"></i> Fungua usajili
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col-md-6 col-lg-4 mb-4">
                                 <div class="card border-info milipuko-card h-100">
                                     <div class="card-body text-center">
                                         <div class="mb-3">
