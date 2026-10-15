@@ -97,7 +97,7 @@
             height: 22mm;
             object-fit: cover;
             border-radius: 1.2mm;
-            background: #fff;
+            background: transparent;
             flex: 0 0 auto;
         }
         .id-photo-empty {

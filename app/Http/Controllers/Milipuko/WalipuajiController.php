@@ -613,14 +613,14 @@ class WalipuajiController extends Controller
         }
 
         $bytes = Storage::disk('public')->get($mlipuzi->picha);
-        $nyeupe = (new PichaMandhariNyeupe)->png($bytes);
-        if ($nyeupe === null) {
+        $wazi = (new PichaMandhariNyeupe)->png($bytes);
+        if ($wazi === null) {
             $mime = Storage::disk('public')->mimeType($mlipuzi->picha) ?: 'image/jpeg';
 
             return 'data:'.$mime.';base64,'.base64_encode($bytes);
         }
 
-        return 'data:image/png;base64,'.base64_encode($nyeupe);
+        return 'data:image/png;base64,'.base64_encode($wazi);
     }
 
     private function chromeBinary(): ?string

@@ -44,21 +44,31 @@ class PichaMandhariNyeupe
             return null;
         }
 
-        $nyeupe = imagecolorallocate($src, 255, 255, 255);
+        $out = imagecreatetruecolor($sw, $sh);
+        imagealphablending($out, false);
+        imagesavealpha($out, true);
+        $wazi = imagecolorallocatealpha($out, 0, 0, 0, 127);
+        imagefilledrectangle($out, 0, 0, $sw - 1, $sh - 1, $wazi);
+        imagealphablending($out, true);
+        imagecopy($out, $src, 0, 0, 0, 0, $sw, $sh);
+        imagedestroy($src);
+        imagealphablending($out, false);
+        imagesavealpha($out, true);
+
         for ($y = 0; $y < $sh; $y++) {
             $sy = min($h - 1, intdiv($y * $h, $sh));
             $mstari = $sy * $w;
             for ($x = 0; $x < $sw; $x++) {
                 $sx = min($w - 1, intdiv($x * $w, $sw));
                 if ($mask[$mstari + $sx] === "\1") {
-                    imagesetpixel($src, $x, $y, $nyeupe);
+                    imagesetpixel($out, $x, $y, $wazi);
                 }
             }
         }
 
         ob_start();
-        imagepng($src, null, 6);
-        imagedestroy($src);
+        imagepng($out, null, 6);
+        imagedestroy($out);
 
         return ob_get_clean() ?: null;
     }
