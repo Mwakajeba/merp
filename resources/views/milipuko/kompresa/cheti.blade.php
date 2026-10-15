@@ -82,7 +82,9 @@
             border: 0;
             border-top: 0.4mm solid #1a4f8b;
         }
-        .mwili { display: flex; gap: 8mm; align-items: flex-start; }
+        .mwili { width: 100%; border-collapse: collapse; }
+        .mwili td { vertical-align: top; }
+        .mwili .picha-seli { width: 40mm; padding-right: 6mm; }
         .picha {
             width: 35mm;
             height: 45mm;
@@ -144,8 +146,15 @@
             .karatasi { width: auto; min-height: auto; box-shadow: none; border: 0; outline: none; padding: 0; }
         }
     </style>
+    @if(!empty($pdf))
+    <style>
+        body, .stage { background: #fff; margin: 0; padding: 0; }
+        .karatasi { width: auto; min-height: 0; box-shadow: none; }
+    </style>
+    @endif
 </head>
 <body>
+    @if(empty($pdf))
     <div class="toolbar no-print">
         <a href="{{ route('milipuko.kompresa.show', $kompresa) }}">Rudi</a>
         <a class="pdf" href="{{ route('milipuko.kompresa.cheti.pdf', $kompresa) }}">Pakua PDF</a>
@@ -154,6 +163,7 @@
             <p class="ujumbe">{{ session('success') }}</p>
         @endif
     </div>
+    @endif
     <div class="stage">
         <article class="karatasi">
             <header class="kichwa">
@@ -172,12 +182,16 @@
                 <p class="namba">{{ $kompresa->namba }}</p>
             </header>
             <hr class="mstari-mwembamba">
-            <div class="mwili">
+            <table class="mwili" cellpadding="0" cellspacing="0">
+                <tr>
+                <td class="picha-seli">
                 @if($pichaInline || $kompresa->pichaUrl())
                     <img class="picha" src="{{ $pichaInline ?: $kompresa->pichaUrl() }}" alt="{{ $kompresa->jina }}">
                 @else
                     <div class="picha picha-tupu">Hakuna picha</div>
                 @endif
+                </td>
+                <td>
                 <table class="taarifa">
                     <tr>
                         <th>Jina la mmiliki</th>
@@ -212,7 +226,9 @@
                         <td>{{ $kompresa->maelezo ?: '—' }}</td>
                     </tr>
                 </table>
-            </div>
+                </td>
+                </tr>
+            </table>
             <p class="tamko">
                 Cheti hiki kinathibitisha kuwa kompresa yenye namba <strong>{{ $kompresa->namba }}</strong>,
                 inayomilikiwa na <strong>{{ $kompresa->jina }}</strong> wa {{ $kompresa->wilaya }}, {{ $kompresa->mkoa }},

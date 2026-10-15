@@ -5,13 +5,12 @@ namespace App\Http\Controllers\Milipuko;
 use App\Http\Controllers\Controller;
 use App\Models\Milipuko\Kompresa;
 use App\Services\SystemSettingService;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
-use Symfony\Component\Process\Process;
 use TCPDF2DBarcode;
 use Yajra\DataTables\Facades\DataTables;
 
@@ -108,59 +107,13 @@ class KompresaController extends Controller
         $data['pichaInline'] = $this->failiDataUri($kompresa->picha);
         $data['logoInline'] = $this->logoDataUri($kompresa);
 
-        $tmp = storage_path('app/tmp');
-        File::ensureDirectoryExists($tmp);
+        $pdf = Pdf::loadView('milipuko.kompresa.cheti', $data)
+            ->setPaper('a4', 'portrait');
 
-        $token = (string) Str::uuid();
-        $htmlPath = $tmp.'/cheti-kompresa-'.$token.'.html';
-        $pdfPath = $tmp.'/cheti-kompresa-'.$token.'.pdf';
-        $profile = $tmp.'/chrome-'.$token;
-        $binary = $this->chromeBinary();
+        $jina = Str::slug($kompresa->namba);
+        $jina = $jina !== '' ? $jina : 'kompresa';
 
-        if ($binary === null) {
-            abort(500, 'PDF haikuweza kutengenezwa.');
-        }
-
-        File::put($htmlPath, view('milipuko.kompresa.cheti', $data)->render());
-
-        $tayari = false;
-
-        try {
-            $process = new Process([
-                $binary,
-                '--headless=new',
-                '--disable-gpu',
-                '--no-sandbox',
-                '--disable-dev-shm-usage',
-                '--no-first-run',
-                '--no-default-browser-check',
-                '--no-pdf-header-footer',
-                '--user-data-dir='.$profile,
-                '--print-to-pdf='.$pdfPath,
-                $htmlPath,
-            ]);
-            $process->setTimeout(30);
-            $process->run();
-
-            if (! $process->isSuccessful() || ! is_file($pdfPath) || filesize($pdfPath) < 1000) {
-                abort(500, 'PDF haikuweza kutengenezwa.');
-            }
-
-            $tayari = true;
-            $jina = Str::slug($kompresa->namba);
-            $jina = $jina !== '' ? $jina : 'kompresa';
-
-            return response()->download($pdfPath, 'cheti-kompresa-'.$jina.'.pdf', [
-                'Content-Type' => 'application/pdf',
-            ])->deleteFileAfterSend(true);
-        } finally {
-            File::delete($htmlPath);
-            File::deleteDirectory($profile);
-
-            if (! $tayari) {
-                File::delete($pdfPath);
-            }
-        }
+        return $pdf->download('cheti-kompresa-'.$jina.'.pdf');
     }
 
     public function thibitisha(string $token)
@@ -271,17 +224,6 @@ class KompresaController extends Controller
         $mime = mime_content_type($path) ?: 'image/png';
 
         return 'data:'.$mime.';base64,'.base64_encode((string) file_get_contents($path));
-    }
-
-    private function chromeBinary(): ?string
-    {
-        foreach (['/usr/bin/google-chrome', '/usr/bin/google-chrome-stable', '/usr/bin/chromium', '/usr/bin/chromium-browser'] as $path) {
-            if (is_executable($path)) {
-                return $path;
-            }
-        }
-
-        return null;
     }
 
     private function formData(): array

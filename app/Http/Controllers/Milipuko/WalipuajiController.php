@@ -9,13 +9,12 @@ use App\Models\Milipuko\Mlipuzi;
 use App\Models\Milipuko\MlipuziKosa;
 use App\Services\SystemSettingService;
 use Illuminate\Http\Request;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
-use Symfony\Component\Process\Process;
 use TCPDF2DBarcode;
 use TCPDFBarcode;
 use Yajra\DataTables\Facades\DataTables;
@@ -250,62 +249,15 @@ class WalipuajiController extends Controller
     public function kitambulishoPdf(Mlipuzi $mlipuzi)
     {
         $data = $this->kitambulishoData($mlipuzi);
-        $data['pdf'] = true;
         $data['pichaInline'] = $this->pichaDataUri($mlipuzi);
 
-        $tmp = storage_path('app/tmp');
-        File::ensureDirectoryExists($tmp);
+        $pdf = Pdf::loadView('milipuko.walipuaji.kitambulisho-pdf', $data)
+            ->setPaper('a4', 'portrait');
 
-        $token = (string) Str::uuid();
-        $htmlPath = $tmp.'/kitambulisho-'.$token.'.html';
-        $pdfPath = $tmp.'/kitambulisho-'.$token.'.pdf';
-        $profile = $tmp.'/chrome-'.$token;
-        $binary = $this->chromeBinary();
+        $jina = $data['usajili'] !== '' ? Str::slug($data['usajili']) : Str::slug($mlipuzi->jina);
+        $jina = $jina !== '' ? $jina : 'mlipuaji';
 
-        if ($binary === null) {
-            abort(500, 'PDF haikuweza kutengenezwa.');
-        }
-
-        File::put($htmlPath, view('milipuko.walipuaji.kitambulisho', $data)->render());
-
-        $tayari = false;
-
-        try {
-            $process = new Process([
-                $binary,
-                '--headless=new',
-                '--disable-gpu',
-                '--no-sandbox',
-                '--disable-dev-shm-usage',
-                '--no-first-run',
-                '--no-default-browser-check',
-                '--no-pdf-header-footer',
-                '--user-data-dir='.$profile,
-                '--print-to-pdf='.$pdfPath,
-                $htmlPath,
-            ]);
-            $process->setTimeout(30);
-            $process->run();
-
-            if (! $process->isSuccessful() || ! is_file($pdfPath) || filesize($pdfPath) < 1000) {
-                abort(500, 'PDF haikuweza kutengenezwa.');
-            }
-
-            $tayari = true;
-            $jina = $data['usajili'] !== '' ? Str::slug($data['usajili']) : Str::slug($mlipuzi->jina);
-            $jina = $jina !== '' ? $jina : 'mlipuaji';
-
-            return response()->download($pdfPath, 'kitambulisho-'.$jina.'.pdf', [
-                'Content-Type' => 'application/pdf',
-            ])->deleteFileAfterSend(true);
-        } finally {
-            File::delete($htmlPath);
-            File::deleteDirectory($profile);
-
-            if (! $tayari) {
-                File::delete($pdfPath);
-            }
-        }
+        return $pdf->download('kitambulisho-'.$jina.'.pdf');
     }
 
     public function thibitisha(string $token)
@@ -696,17 +648,6 @@ class WalipuajiController extends Controller
         $mime = Storage::disk('public')->mimeType($mlipuzi->picha) ?: 'image/jpeg';
 
         return 'data:'.$mime.';base64,'.base64_encode(Storage::disk('public')->get($mlipuzi->picha));
-    }
-
-    private function chromeBinary(): ?string
-    {
-        foreach (['/usr/bin/google-chrome', '/usr/bin/google-chrome-stable', '/usr/bin/chromium', '/usr/bin/chromium-browser'] as $path) {
-            if (is_executable($path)) {
-                return $path;
-            }
-        }
-
-        return null;
     }
 
     private function qrDataUri(string $url): string
