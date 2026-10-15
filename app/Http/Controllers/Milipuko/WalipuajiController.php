@@ -18,6 +18,7 @@ use Illuminate\Validation\ValidationException;
 use Symfony\Component\Process\Process;
 use TCPDF2DBarcode;
 use TCPDFBarcode;
+use Yajra\DataTables\Facades\DataTables;
 
 class WalipuajiController extends Controller
 {
@@ -28,14 +29,94 @@ class WalipuajiController extends Controller
             $hali = null;
         }
 
-        $walipuaji = Mlipuzi::forCompany(auth()->user()->company_id)
-            ->when($hali, fn ($query) => $query->where('hali', $hali))
-            ->with('mwenyeBc')
-            ->withCount('wawasiliani')
-            ->latest()
-            ->get();
+        return view('milipuko.walipuaji.index', compact('hali'));
+    }
 
-        return view('milipuko.walipuaji.index', compact('walipuaji', 'hali'));
+    public function data(Request $request)
+    {
+        $hali = $request->query('hali');
+        if (! in_array($hali, ['active', 'blocked'], true)) {
+            $hali = null;
+        }
+
+        $query = Mlipuzi::forCompany(auth()->user()->company_id)
+            ->select([
+                'walipuaji.id',
+                'walipuaji.jina',
+                'walipuaji.namba_ya_usajili',
+                'walipuaji.hali',
+                'walipuaji.aina_ya_bc',
+                'walipuaji.bc_no',
+                'walipuaji.bc_ya_mlipuzi_id',
+                'walipuaji.simu',
+                'walipuaji.picha',
+                'walipuaji.mkoa',
+                'walipuaji.wilaya',
+            ])
+            ->with('mwenyeBc:id,jina,bc_no')
+            ->when($hali, fn ($q) => $q->where('walipuaji.hali', $hali));
+
+        return DataTables::eloquent($query)
+            ->addColumn('picha', function (Mlipuzi $mlipuzi) {
+                $url = $mlipuzi->pichaUrl();
+                if (! $url) {
+                    return '<span class="text-muted">—</span>';
+                }
+
+                return '<img src="'.e($url).'" alt="'.e($mlipuzi->jina).'" width="48" height="48" class="rounded-circle object-fit-cover">';
+            })
+            ->addColumn('bc', function (Mlipuzi $mlipuzi) {
+                $namba = e($mlipuzi->bcInayotumika() ?: '—');
+                if ($mlipuzi->aina_ya_bc === 'mtu' && $mlipuzi->mwenyeBc) {
+                    $namba .= '<div class="small text-muted">Ya '.e($mlipuzi->mwenyeBc->jina).'</div>';
+                }
+
+                return $namba;
+            })
+            ->editColumn('namba_ya_usajili', fn (Mlipuzi $mlipuzi) => e($mlipuzi->namba_ya_usajili ?: '—'))
+            ->editColumn('hali', function (Mlipuzi $mlipuzi) {
+                if ($mlipuzi->hali === 'blocked') {
+                    return '<span class="badge bg-danger">Blocked</span>';
+                }
+
+                return '<span class="badge bg-success">Active</span>';
+            })
+            ->addColumn('vitendo', function (Mlipuzi $mlipuzi) {
+                return '<a href="'.e(route('milipuko.walipuaji.show', $mlipuzi)).'" class="btn btn-sm btn-outline-primary">Angalia</a>'
+                    .' <a href="'.e(route('milipuko.walipuaji.kitambulisho', $mlipuzi)).'" class="btn btn-sm btn-outline-secondary">Kitambulisho</a>'
+                    .' <a href="'.e(route('milipuko.walipuaji.edit', $mlipuzi)).'" class="btn btn-sm btn-outline-warning">Hariri</a>';
+            })
+            ->filterColumn('bc', function ($query, $keyword) {
+                $query->where(function ($q) use ($keyword) {
+                    $q->where('walipuaji.bc_no', 'like', '%'.$keyword.'%')
+                        ->orWhereHas('mwenyeBc', function ($mwenye) use ($keyword) {
+                            $mwenye->where('bc_no', 'like', '%'.$keyword.'%')
+                                ->orWhere('jina', 'like', '%'.$keyword.'%');
+                        });
+                });
+            })
+            ->filterColumn('hali', function ($query, $keyword) {
+                $neno = mb_strtolower(trim($keyword));
+                if ($neno === '') {
+                    return;
+                }
+                if (str_contains('blocked', $neno)) {
+                    $query->where('walipuaji.hali', 'blocked');
+                } elseif (str_contains('active', $neno)) {
+                    $query->where('walipuaji.hali', 'active');
+                } else {
+                    $query->whereRaw('1 = 0');
+                }
+            })
+            ->orderColumn('bc', function ($query, $order) {
+                $mwelekeo = strtolower((string) $order) === 'asc' ? 'asc' : 'desc';
+                $query->orderByRaw(
+                    "CASE WHEN walipuaji.aina_ya_bc = 'mtu' THEN (SELECT w2.bc_no FROM walipuaji AS w2 WHERE w2.id = walipuaji.bc_ya_mlipuzi_id LIMIT 1) ELSE walipuaji.bc_no END ".$mwelekeo
+                );
+            })
+            ->rawColumns(['picha', 'bc', 'hali', 'vitendo'])
+            ->removeColumn('id', 'aina_ya_bc', 'bc_no', 'bc_ya_mlipuzi_id', 'mwenye_bc')
+            ->make(true);
     }
 
     public function create()

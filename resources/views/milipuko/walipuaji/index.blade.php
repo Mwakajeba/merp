@@ -22,7 +22,7 @@
         <div class="card">
             <div class="card-body">
                 <div class="table-responsive">
-                    <table class="table table-striped align-middle">
+                    <table id="walipuaji-table" class="table table-striped align-middle w-100">
                         <thead>
                             <tr>
                                 <th>Picha</th>
@@ -36,46 +36,7 @@
                                 <th class="text-end">Vitendo</th>
                             </tr>
                         </thead>
-                        <tbody>
-                            @forelse($walipuaji as $mlipuzi)
-                                <tr>
-                                    <td>
-                                        @if($mlipuzi->pichaUrl())
-                                            <img src="{{ $mlipuzi->pichaUrl() }}" alt="{{ $mlipuzi->jina }}" width="48" height="48" class="rounded-circle object-fit-cover">
-                                        @else
-                                            <span class="text-muted">—</span>
-                                        @endif
-                                    </td>
-                                    <td>{{ $mlipuzi->jina }}</td>
-                                    <td>{{ $mlipuzi->namba_ya_usajili ?: '—' }}</td>
-                                    <td>
-                                        {{ $mlipuzi->bcInayotumika() ?: '—' }}
-                                        @if($mlipuzi->aina_ya_bc === 'mtu' && $mlipuzi->mwenyeBc)
-                                            <div class="small text-muted">Ya {{ $mlipuzi->mwenyeBc->jina }}</div>
-                                        @endif
-                                    </td>
-                                    <td>
-                                        @if($mlipuzi->hali === 'blocked')
-                                            <span class="badge bg-danger">Blocked</span>
-                                        @else
-                                            <span class="badge bg-success">Active</span>
-                                        @endif
-                                    </td>
-                                    <td>{{ $mlipuzi->simu }}</td>
-                                    <td>{{ $mlipuzi->mkoa }}</td>
-                                    <td>{{ $mlipuzi->wilaya }}</td>
-                                    <td class="text-end">
-                                        <a href="{{ route('milipuko.walipuaji.show', $mlipuzi) }}" class="btn btn-sm btn-outline-primary">Angalia</a>
-                                        <a href="{{ route('milipuko.walipuaji.kitambulisho', $mlipuzi) }}" class="btn btn-sm btn-outline-secondary">Kitambulisho</a>
-                                        <a href="{{ route('milipuko.walipuaji.edit', $mlipuzi) }}" class="btn btn-sm btn-outline-warning">Hariri</a>
-                                    </td>
-                                </tr>
-                            @empty
-                                <tr>
-                                    <td colspan="9" class="text-center text-muted py-4">{{ $hali === 'blocked' ? 'Hakuna blasta waliofungiwa.' : 'Hakuna walipuaji waliowekwa bado.' }}</td>
-                                </tr>
-                            @endforelse
-                        </tbody>
+                        <tbody></tbody>
                     </table>
                 </div>
             </div>
@@ -83,3 +44,50 @@
     </div>
 </div>
 @endsection
+
+@push('scripts')
+<script nonce="{{ $cspNonce ?? '' }}">
+    $(function () {
+        $('#walipuaji-table').DataTable({
+            processing: true,
+            serverSide: true,
+            ajax: {
+                url: @json(route('milipuko.walipuaji.data')),
+                type: 'GET',
+                data: function (d) {
+                    d.hali = @json($hali);
+                }
+            },
+            order: [[1, 'asc']],
+            pageLength: 25,
+            columns: [
+                { data: 'picha', name: 'picha', orderable: false, searchable: false },
+                { data: 'jina', name: 'jina' },
+                { data: 'namba_ya_usajili', name: 'namba_ya_usajili' },
+                { data: 'bc', name: 'bc' },
+                { data: 'hali', name: 'hali' },
+                { data: 'simu', name: 'simu' },
+                { data: 'mkoa', name: 'mkoa' },
+                { data: 'wilaya', name: 'wilaya' },
+                { data: 'vitendo', name: 'vitendo', orderable: false, searchable: false, className: 'text-end' }
+            ],
+            language: {
+                processing: 'Inapakia...',
+                search: 'Tafuta:',
+                lengthMenu: 'Onyesha _MENU_',
+                info: 'Inaonyesha _START_ hadi _END_ kati ya _TOTAL_',
+                infoEmpty: @json($hali === 'blocked' ? 'Hakuna blasta waliofungiwa' : 'Hakuna walipuaji'),
+                infoFiltered: '(zimechujwa kutoka _MAX_)',
+                zeroRecords: 'Hakuna walipuaji wanaolingana.',
+                emptyTable: @json($hali === 'blocked' ? 'Hakuna blasta waliofungiwa.' : 'Hakuna walipuaji waliowekwa bado.'),
+                paginate: {
+                    first: 'Kwanza',
+                    last: 'Mwisho',
+                    next: 'Mbele',
+                    previous: 'Nyuma'
+                }
+            }
+        });
+    });
+</script>
+@endpush

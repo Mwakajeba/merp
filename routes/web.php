@@ -250,6 +250,7 @@ Route::get('/thibitisha/kibali/{token}', [VibaliController::class, 'thibitisha']
     ->name('milipuko.vibali.thibitisha');
 Route::prefix('milipuko/walipuaji')->name('milipuko.walipuaji.')->middleware(['auth', 'company.scope', 'require.branch'])->group(function () {
     Route::get('/', [WalipuajiController::class, 'index'])->name('index');
+    Route::get('/data', [WalipuajiController::class, 'data'])->name('data');
     Route::get('/create', [WalipuajiController::class, 'create'])->name('create');
     Route::post('/', [WalipuajiController::class, 'store'])->name('store');
     Route::get('/{mlipuzi}/kitambulisho', [WalipuajiController::class, 'kitambulisho'])->name('kitambulisho');
