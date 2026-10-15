@@ -10,6 +10,7 @@ use App\Models\Milipuko\Mwanachama;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
+use Yajra\DataTables\Facades\DataTables;
 
 class MaduaraController extends Controller
 {
@@ -20,13 +21,71 @@ class MaduaraController extends Controller
             $hali = null;
         }
 
-        $maduara = Duara::forCompany(auth()->user()->company_id)
-            ->when($hali, fn ($query) => $query->where('hali', $hali))
-            ->withCount(['wasimamizi', 'wanachama'])
-            ->latest()
-            ->get();
+        return view('milipuko.maduara.index', compact('hali'));
+    }
 
-        return view('milipuko.maduara.index', compact('maduara', 'hali'));
+    public function data(Request $request)
+    {
+        $hali = $request->query('hali');
+        if (! in_array($hali, ['inafanya_kazi', 'imefungwa'], true)) {
+            $hali = null;
+        }
+
+        $query = Duara::forCompany(auth()->user()->company_id)
+            ->select([
+                'maduara.id',
+                'maduara.namba',
+                'maduara.maelezo',
+                'maduara.hali',
+            ])
+            ->withCount(['wasimamizi', 'wanachama'])
+            ->when($hali, fn ($q) => $q->where('maduara.hali', $hali));
+
+        return DataTables::eloquent($query)
+            ->editColumn('maelezo', fn (Duara $duara) => e($duara->maelezo ?: '—'))
+            ->editColumn('hali', function (Duara $duara) {
+                if ($duara->imefungwa()) {
+                    return '<span class="badge bg-danger">Imefungwa</span>';
+                }
+
+                return '<span class="badge bg-success">Inafanya kazi</span>';
+            })
+            ->addColumn('vitendo', function (Duara $duara) {
+                return '<a href="'.e(route('milipuko.maduara.show', $duara)).'" class="btn btn-sm btn-outline-primary">Angalia</a>'
+                    .' <a href="'.e(route('milipuko.maduara.edit', $duara)).'" class="btn btn-sm btn-outline-warning">Hariri</a>';
+            })
+            ->filterColumn('hali', function ($query, $keyword) {
+                $neno = mb_strtolower(trim($keyword));
+                if ($neno === '') {
+                    return;
+                }
+
+                $imefungwa = str_contains('imefungwa', $neno);
+                $inafanya = str_contains('inafanya kazi', $neno) || str_contains('inafanyakazi', str_replace(' ', '', $neno));
+
+                if ($imefungwa && ! $inafanya) {
+                    $query->where('maduara.hali', 'imefungwa');
+                } elseif ($inafanya && ! $imefungwa) {
+                    $query->where('maduara.hali', 'inafanya_kazi');
+                } else {
+                    $query->where('maduara.hali', 'like', '%'.$keyword.'%');
+                }
+            })
+            ->orderColumn('namba', function ($query, $order) {
+                $mwelekeo = strtolower((string) $order) === 'desc' ? 'desc' : 'asc';
+                $query->orderByRaw('CAST(maduara.namba AS UNSIGNED) '.$mwelekeo);
+            })
+            ->orderColumn('wasimamizi_count', function ($query, $order) {
+                $mwelekeo = strtolower((string) $order) === 'desc' ? 'desc' : 'asc';
+                $query->orderBy('wasimamizi_count', $mwelekeo);
+            })
+            ->orderColumn('wanachama_count', function ($query, $order) {
+                $mwelekeo = strtolower((string) $order) === 'desc' ? 'desc' : 'asc';
+                $query->orderBy('wanachama_count', $mwelekeo);
+            })
+            ->rawColumns(['hali', 'vitendo'])
+            ->removeColumn('id')
+            ->make(true);
     }
 
     public function create()

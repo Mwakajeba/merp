@@ -22,7 +22,7 @@
         <div class="card">
             <div class="card-body">
                 <div class="table-responsive">
-                    <table class="table table-striped align-middle">
+                    <table id="maduara-table" class="table table-striped align-middle w-100">
                         <thead>
                             <tr>
                                 <th>Namba ya duara</th>
@@ -33,31 +33,7 @@
                                 <th class="text-end">Vitendo</th>
                             </tr>
                         </thead>
-                        <tbody>
-                            @forelse($maduara as $duara)
-                                <tr>
-                                    <td>{{ $duara->namba }}</td>
-                                    <td>
-                                        @if($duara->imefungwa())
-                                            <span class="badge bg-danger">Imefungwa</span>
-                                        @else
-                                            <span class="badge bg-success">Inafanya kazi</span>
-                                        @endif
-                                    </td>
-                                    <td>{{ $duara->maelezo ?: '—' }}</td>
-                                    <td>{{ $duara->wasimamizi_count }}</td>
-                                    <td>{{ $duara->wanachama_count }}</td>
-                                    <td class="text-end">
-                                        <a href="{{ route('milipuko.maduara.show', $duara) }}" class="btn btn-sm btn-outline-primary">Angalia</a>
-                                        <a href="{{ route('milipuko.maduara.edit', $duara) }}" class="btn btn-sm btn-outline-warning">Hariri</a>
-                                    </td>
-                                </tr>
-                            @empty
-                                <tr>
-                                    <td colspan="6" class="text-center text-muted py-4">{{ $hali === 'imefungwa' ? 'Hakuna maduara yaliyofungwa.' : 'Hakuna maduara yaliyosajiliwa bado.' }}</td>
-                                </tr>
-                            @endforelse
-                        </tbody>
+                        <tbody></tbody>
                     </table>
                 </div>
             </div>
@@ -65,3 +41,47 @@
     </div>
 </div>
 @endsection
+
+@push('scripts')
+<script nonce="{{ $cspNonce ?? '' }}">
+    $(function () {
+        $('#maduara-table').DataTable({
+            processing: true,
+            serverSide: true,
+            ajax: {
+                url: @json(route('milipuko.maduara.data')),
+                type: 'GET',
+                data: function (d) {
+                    d.hali = @json($hali);
+                }
+            },
+            order: [[0, 'asc']],
+            pageLength: 25,
+            columns: [
+                { data: 'namba', name: 'namba' },
+                { data: 'hali', name: 'hali' },
+                { data: 'maelezo', name: 'maelezo' },
+                { data: 'wasimamizi_count', name: 'wasimamizi_count', searchable: false },
+                { data: 'wanachama_count', name: 'wanachama_count', searchable: false },
+                { data: 'vitendo', name: 'vitendo', orderable: false, searchable: false, className: 'text-end' }
+            ],
+            language: {
+                processing: 'Inapakia...',
+                search: 'Tafuta:',
+                lengthMenu: 'Onyesha _MENU_',
+                info: 'Inaonyesha _START_ hadi _END_ kati ya _TOTAL_',
+                infoEmpty: @json($hali === 'imefungwa' ? 'Hakuna maduara yaliyofungwa' : 'Hakuna maduara'),
+                infoFiltered: '(yamechujwa kutoka _MAX_)',
+                zeroRecords: 'Hakuna maduara yanayolingana.',
+                emptyTable: @json($hali === 'imefungwa' ? 'Hakuna maduara yaliyofungwa.' : 'Hakuna maduara yaliyosajiliwa bado.'),
+                paginate: {
+                    first: 'Kwanza',
+                    last: 'Mwisho',
+                    next: 'Mbele',
+                    previous: 'Nyuma'
+                }
+            }
+        });
+    });
+</script>
+@endpush

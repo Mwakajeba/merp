@@ -229,6 +229,7 @@ Route::get('/milipuko/taarifa', [TaarifaController::class, 'index'])->middleware
 Route::get('/milipuko/taarifa/pdf', [TaarifaController::class, 'pdf'])->middleware(['auth', 'company.scope', 'require.branch'])->name('milipuko.taarifa.pdf');
 Route::prefix('milipuko/maduara')->name('milipuko.maduara.')->middleware(['auth', 'company.scope', 'require.branch'])->group(function () {
     Route::get('/', [MaduaraController::class, 'index'])->name('index');
+    Route::get('/data', [MaduaraController::class, 'data'])->name('data');
     Route::get('/create', [MaduaraController::class, 'create'])->name('create');
     Route::post('/', [MaduaraController::class, 'store'])->name('store');
     Route::get('/{duara}', [MaduaraController::class, 'show'])->name('show');
