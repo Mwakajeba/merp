@@ -7,7 +7,6 @@ use App\Models\Milipuko\Kibali;
 use App\Models\Milipuko\Kosa;
 use App\Models\Milipuko\Mlipuzi;
 use App\Models\Milipuko\MlipuziKosa;
-use App\Services\Milipuko\PichaMandhariNyeupe;
 use App\Services\SystemSettingService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -171,6 +170,7 @@ class WalipuajiController extends Controller
     {
         $data = $this->kitambulishoData($mlipuzi);
         $data['pdf'] = true;
+        $data['pichaInline'] = $this->pichaDataUri($mlipuzi);
 
         $tmp = storage_path('app/tmp');
         File::ensureDirectoryExists($tmp);
@@ -602,7 +602,7 @@ class WalipuajiController extends Controller
             'barcode' => $usajili !== '' ? $this->barcodeDataUri($usajili) : null,
             'appName' => SystemSettingService::get('app_name', 'M-ERP'),
             'pdf' => false,
-            'pichaInline' => $this->pichaDataUri($mlipuzi),
+            'pichaInline' => null,
         ];
     }
 
@@ -612,15 +612,9 @@ class WalipuajiController extends Controller
             return null;
         }
 
-        $bytes = Storage::disk('public')->get($mlipuzi->picha);
-        $wazi = (new PichaMandhariNyeupe)->png($bytes);
-        if ($wazi === null) {
-            $mime = Storage::disk('public')->mimeType($mlipuzi->picha) ?: 'image/jpeg';
+        $mime = Storage::disk('public')->mimeType($mlipuzi->picha) ?: 'image/jpeg';
 
-            return 'data:'.$mime.';base64,'.base64_encode($bytes);
-        }
-
-        return 'data:image/png;base64,'.base64_encode($wazi);
+        return 'data:'.$mime.';base64,'.base64_encode(Storage::disk('public')->get($mlipuzi->picha));
     }
 
     private function chromeBinary(): ?string

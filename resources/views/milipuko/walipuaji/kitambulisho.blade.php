@@ -97,14 +97,13 @@
             height: 22mm;
             object-fit: cover;
             border-radius: 1.2mm;
-            background: transparent;
+            background: #d7dee6;
             flex: 0 0 auto;
         }
         .id-photo-empty {
             display: flex;
             align-items: center;
             justify-content: center;
-            background: #d7dee6;
             color: #5c6b7a;
             font-size: 8px;
             text-align: center;
