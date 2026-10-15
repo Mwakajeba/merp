@@ -253,6 +253,7 @@ Route::prefix('milipuko/walipuaji')->name('milipuko.walipuaji.')->middleware(['a
     Route::get('/create', [WalipuajiController::class, 'create'])->name('create');
     Route::post('/', [WalipuajiController::class, 'store'])->name('store');
     Route::get('/{mlipuzi}/kitambulisho', [WalipuajiController::class, 'kitambulisho'])->name('kitambulisho');
+    Route::get('/{mlipuzi}/kitambulisho/pdf', [WalipuajiController::class, 'kitambulishoPdf'])->name('kitambulisho.pdf');
     Route::get('/{mlipuzi}/makosa/create', [WalipuajiController::class, 'createKosa'])->name('makosa.create');
     Route::post('/{mlipuzi}/makosa', [WalipuajiController::class, 'storeKosa'])->name('makosa.store');
     Route::get('/{mlipuzi}/makosa/{rekodi}/edit', [WalipuajiController::class, 'editKosa'])->name('makosa.edit');

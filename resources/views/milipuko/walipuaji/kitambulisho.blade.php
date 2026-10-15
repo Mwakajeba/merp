@@ -28,7 +28,7 @@
             cursor: pointer;
         }
         .toolbar a { background: #fff; color: #1b2430; }
-        .toolbar button { background: #0b6e4f; color: #fff; }
+        .toolbar a.pdf, .toolbar button { background: #0b6e4f; color: #fff; }
         .stage {
             display: flex;
             flex-direction: column;
@@ -97,13 +97,14 @@
             height: 22mm;
             object-fit: cover;
             border-radius: 1.2mm;
-            background: #d7dee6;
+            background: #fff;
             flex: 0 0 auto;
         }
         .id-photo-empty {
             display: flex;
             align-items: center;
             justify-content: center;
+            background: #d7dee6;
             color: #5c6b7a;
             font-size: 8px;
             text-align: center;
@@ -180,22 +181,42 @@
             font-weight: 700;
             letter-spacing: 0.06em;
         }
-        @page { size: 85.6mm 54mm; margin: 0; }
+        @page { size: {{ $pdf ? 'A4 portrait' : '85.6mm 54mm' }}; margin: 0; }
         @media print {
-            body { background: #fff; }
+            body { background: #fff; margin: 0; }
             .no-print { display: none !important; }
-            .stage { padding: 0; break-after: page; }
-            .stage:last-child { break-after: auto; }
+            @if($pdf)
+            html, body { width: 210mm; height: 297mm; overflow: hidden; }
+            .stage {
+                position: absolute;
+                left: 0;
+                width: 210mm;
+                margin: 0;
+                padding: 0;
+                break-after: avoid;
+                page-break-after: avoid;
+            }
+            .stage.mbele { top: 40mm; }
+            .stage.nyuma { top: 160mm; }
+            .id-card {
+                box-shadow: 0 1.2mm 2.6mm rgba(15, 23, 42, 0.16);
+                border: 0.25mm solid #e3e8ee;
+            }
+            @else
+            .stage { padding: 0; margin: 0; break-after: page; page-break-after: page; }
+            .stage:last-child { break-after: auto; page-break-after: auto; }
             .id-card { box-shadow: none; border-radius: 0; }
+            @endif
         }
     </style>
 </head>
 <body>
     <div class="toolbar no-print">
         <a href="{{ route('milipuko.walipuaji.show', $mlipuzi) }}">Rudi</a>
+        <a class="pdf" href="{{ route('milipuko.walipuaji.kitambulisho.pdf', $mlipuzi) }}">Pakua PDF</a>
         <button type="button" onclick="window.print()">Chapisha</button>
     </div>
-    <div class="stage">
+    <div class="stage mbele">
         <p class="upande no-print">Mbele</p>
         <article class="id-card">
             <header class="id-head{{ preg_match('/^MS\.\d{4}$/i', $usajili) ? ' id-head-ms' : '' }}">
@@ -210,8 +231,8 @@
                     @endif
                 </div>
                 <div class="id-body">
-                    @if($mlipuzi->pichaUrl())
-                        <img class="id-photo" src="{{ $mlipuzi->pichaUrl() }}" alt="{{ $mlipuzi->jina }}">
+                    @if($pichaInline || $mlipuzi->pichaUrl())
+                        <img class="id-photo" src="{{ $pichaInline ?: $mlipuzi->pichaUrl() }}" alt="{{ $mlipuzi->jina }}">
                     @else
                         <div class="id-photo id-photo-empty">Hakuna picha</div>
                     @endif
@@ -234,7 +255,7 @@
             </div>
         </article>
     </div>
-    <div class="stage">
+    <div class="stage nyuma">
         <p class="upande no-print">Nyuma</p>
         <article class="id-card id-back">
             <svg class="muhuri" viewBox="0 0 856 540" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">

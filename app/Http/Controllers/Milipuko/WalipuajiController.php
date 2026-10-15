@@ -7,12 +7,16 @@ use App\Models\Milipuko\Kibali;
 use App\Models\Milipuko\Kosa;
 use App\Models\Milipuko\Mlipuzi;
 use App\Models\Milipuko\MlipuziKosa;
+use App\Services\Milipuko\PichaMandhariNyeupe;
 use App\Services\SystemSettingService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
+use Symfony\Component\Process\Process;
 use TCPDF2DBarcode;
 use TCPDFBarcode;
 
@@ -160,18 +164,67 @@ class WalipuajiController extends Controller
 
     public function kitambulisho(Mlipuzi $mlipuzi)
     {
-        $mlipuzi->load(['company', 'mwenyeBc']);
-        $url = $mlipuzi->thibitishoUrl();
-        $usajili = trim((string) $mlipuzi->namba_ya_usajili);
+        return view('milipuko.walipuaji.kitambulisho', $this->kitambulishoData($mlipuzi));
+    }
 
-        return view('milipuko.walipuaji.kitambulisho', [
-            'mlipuzi' => $mlipuzi,
-            'thibitishoUrl' => $url,
-            'qr' => $this->qrDataUri($url),
-            'usajili' => $usajili,
-            'barcode' => $usajili !== '' ? $this->barcodeDataUri($usajili) : null,
-            'appName' => SystemSettingService::get('app_name', 'M-ERP'),
-        ]);
+    public function kitambulishoPdf(Mlipuzi $mlipuzi)
+    {
+        $data = $this->kitambulishoData($mlipuzi);
+        $data['pdf'] = true;
+
+        $tmp = storage_path('app/tmp');
+        File::ensureDirectoryExists($tmp);
+
+        $token = (string) Str::uuid();
+        $htmlPath = $tmp.'/kitambulisho-'.$token.'.html';
+        $pdfPath = $tmp.'/kitambulisho-'.$token.'.pdf';
+        $profile = $tmp.'/chrome-'.$token;
+        $binary = $this->chromeBinary();
+
+        if ($binary === null) {
+            abort(500, 'PDF haikuweza kutengenezwa.');
+        }
+
+        File::put($htmlPath, view('milipuko.walipuaji.kitambulisho', $data)->render());
+
+        $tayari = false;
+
+        try {
+            $process = new Process([
+                $binary,
+                '--headless=new',
+                '--disable-gpu',
+                '--no-sandbox',
+                '--disable-dev-shm-usage',
+                '--no-first-run',
+                '--no-default-browser-check',
+                '--no-pdf-header-footer',
+                '--user-data-dir='.$profile,
+                '--print-to-pdf='.$pdfPath,
+                $htmlPath,
+            ]);
+            $process->setTimeout(30);
+            $process->run();
+
+            if (! $process->isSuccessful() || ! is_file($pdfPath) || filesize($pdfPath) < 1000) {
+                abort(500, 'PDF haikuweza kutengenezwa.');
+            }
+
+            $tayari = true;
+            $jina = $data['usajili'] !== '' ? Str::slug($data['usajili']) : Str::slug($mlipuzi->jina);
+            $jina = $jina !== '' ? $jina : 'mlipuaji';
+
+            return response()->download($pdfPath, 'kitambulisho-'.$jina.'.pdf', [
+                'Content-Type' => 'application/pdf',
+            ])->deleteFileAfterSend(true);
+        } finally {
+            File::delete($htmlPath);
+            File::deleteDirectory($profile);
+
+            if (! $tayari) {
+                File::delete($pdfPath);
+            }
+        }
     }
 
     public function thibitisha(string $token)
@@ -533,6 +586,47 @@ class WalipuajiController extends Controller
         if ($rows !== []) {
             $mlipuzi->wawasiliani()->createMany($rows);
         }
+    }
+
+    private function kitambulishoData(Mlipuzi $mlipuzi): array
+    {
+        $mlipuzi->load(['company', 'mwenyeBc']);
+        $url = $mlipuzi->thibitishoUrl();
+        $usajili = trim((string) $mlipuzi->namba_ya_usajili);
+
+        return [
+            'mlipuzi' => $mlipuzi,
+            'thibitishoUrl' => $url,
+            'qr' => $this->qrDataUri($url),
+            'usajili' => $usajili,
+            'barcode' => $usajili !== '' ? $this->barcodeDataUri($usajili) : null,
+            'appName' => SystemSettingService::get('app_name', 'M-ERP'),
+            'pdf' => false,
+            'pichaInline' => $this->pichaDataUri($mlipuzi),
+        ];
+    }
+
+    private function pichaDataUri(Mlipuzi $mlipuzi): ?string
+    {
+        if (! $mlipuzi->picha || ! Storage::disk('public')->exists($mlipuzi->picha)) {
+            return null;
+        }
+
+        $bytes = Storage::disk('public')->get($mlipuzi->picha);
+        $nyeupe = (new PichaMandhariNyeupe)->jpeg($bytes);
+
+        return 'data:image/jpeg;base64,'.base64_encode($nyeupe ?? $bytes);
+    }
+
+    private function chromeBinary(): ?string
+    {
+        foreach (['/usr/bin/google-chrome', '/usr/bin/google-chrome-stable', '/usr/bin/chromium', '/usr/bin/chromium-browser'] as $path) {
+            if (is_executable($path)) {
+                return $path;
+            }
+        }
+
+        return null;
     }
 
     private function qrDataUri(string $url): string
