@@ -30,7 +30,7 @@
             background: #fff;
             color: #1b2430;
         }
-        .toolbar button { background: #1a4f8b; color: #fff; }
+        .toolbar a.pdf, .toolbar button { background: #1a4f8b; color: #fff; }
         .ujumbe {
             margin: 0;
             font-family: Arial, Helvetica, sans-serif;
@@ -128,6 +128,14 @@
         }
         .sahihi p { margin: 0; font-size: 13px; font-weight: 700; letter-spacing: 0.06em; }
         .tarehe { margin-top: 8mm; font-size: 14px; }
+        .uthibitisho { margin-top: 10mm; text-align: center; }
+        .uthibitisho img { width: 32mm; height: 32mm; }
+        .uthibitisho p {
+            margin: 2mm 0 0;
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 12px;
+            color: #1a4f8b;
+        }
         @page { size: A4 portrait; margin: 12mm; }
         @media print {
             body { background: #fff; }
@@ -140,6 +148,7 @@
 <body>
     <div class="toolbar no-print">
         <a href="{{ route('milipuko.kompresa.show', $kompresa) }}">Rudi</a>
+        <a class="pdf" href="{{ route('milipuko.kompresa.cheti.pdf', $kompresa) }}">Pakua PDF</a>
         <button type="button" onclick="window.print()">Chapisha</button>
         @if(session('success'))
             <p class="ujumbe">{{ session('success') }}</p>
@@ -148,8 +157,8 @@
     <div class="stage">
         <article class="karatasi">
             <header class="kichwa">
-                @if($kompresa->company?->logo && file_exists(public_path('storage/'.ltrim($kompresa->company->logo, '/'))))
-                    <img class="logo" src="{{ asset('storage/'.ltrim($kompresa->company->logo, '/')) }}" alt="{{ $kompresa->company->name }}">
+                @if($logoInline || ($kompresa->company?->logo && file_exists(public_path('storage/'.ltrim($kompresa->company->logo, '/')))))
+                    <img class="logo" src="{{ $logoInline ?: asset('storage/'.ltrim($kompresa->company->logo, '/')) }}" alt="{{ $kompresa->company->name }}">
                 @endif
                 <p class="ofisi">BLASTING OFFICE</p>
                 <p class="kampuni">{{ $kompresa->company->name ?? 'M-ERP' }}</p>
@@ -164,8 +173,8 @@
             </header>
             <hr class="mstari-mwembamba">
             <div class="mwili">
-                @if($kompresa->pichaUrl())
-                    <img class="picha" src="{{ $kompresa->pichaUrl() }}" alt="{{ $kompresa->jina }}">
+                @if($pichaInline || $kompresa->pichaUrl())
+                    <img class="picha" src="{{ $pichaInline ?: $kompresa->pichaUrl() }}" alt="{{ $kompresa->jina }}">
                 @else
                     <div class="picha picha-tupu">Hakuna picha</div>
                 @endif
@@ -213,6 +222,10 @@
             <div class="sahihi">
                 <div class="mstari"></div>
                 <p>KATIBU WA IDARA</p>
+            </div>
+            <div class="uthibitisho">
+                <img src="{{ $qr }}" alt="QR ya uthibitisho">
+                <p>Scan kuthibitisha kuwa cheti hiki ni halali</p>
             </div>
         </article>
     </div>

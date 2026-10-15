@@ -4,10 +4,15 @@ namespace App\Http\Controllers\Milipuko;
 
 use App\Http\Controllers\Controller;
 use App\Models\Milipuko\Kompresa;
+use App\Services\SystemSettingService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
+use Symfony\Component\Process\Process;
+use TCPDF2DBarcode;
 use Yajra\DataTables\Facades\DataTables;
 
 class KompresaController extends Controller
@@ -93,9 +98,81 @@ class KompresaController extends Controller
 
     public function cheti(Kompresa $kompresa)
     {
-        $kompresa->load('company');
+        return view('milipuko.kompresa.cheti', $this->chetiData($kompresa));
+    }
 
-        return view('milipuko.kompresa.cheti', compact('kompresa'));
+    public function chetiPdf(Kompresa $kompresa)
+    {
+        $data = $this->chetiData($kompresa);
+        $data['pdf'] = true;
+        $data['pichaInline'] = $this->failiDataUri($kompresa->picha);
+        $data['logoInline'] = $this->logoDataUri($kompresa);
+
+        $tmp = storage_path('app/tmp');
+        File::ensureDirectoryExists($tmp);
+
+        $token = (string) Str::uuid();
+        $htmlPath = $tmp.'/cheti-kompresa-'.$token.'.html';
+        $pdfPath = $tmp.'/cheti-kompresa-'.$token.'.pdf';
+        $profile = $tmp.'/chrome-'.$token;
+        $binary = $this->chromeBinary();
+
+        if ($binary === null) {
+            abort(500, 'PDF haikuweza kutengenezwa.');
+        }
+
+        File::put($htmlPath, view('milipuko.kompresa.cheti', $data)->render());
+
+        $tayari = false;
+
+        try {
+            $process = new Process([
+                $binary,
+                '--headless=new',
+                '--disable-gpu',
+                '--no-sandbox',
+                '--disable-dev-shm-usage',
+                '--no-first-run',
+                '--no-default-browser-check',
+                '--no-pdf-header-footer',
+                '--user-data-dir='.$profile,
+                '--print-to-pdf='.$pdfPath,
+                $htmlPath,
+            ]);
+            $process->setTimeout(30);
+            $process->run();
+
+            if (! $process->isSuccessful() || ! is_file($pdfPath) || filesize($pdfPath) < 1000) {
+                abort(500, 'PDF haikuweza kutengenezwa.');
+            }
+
+            $tayari = true;
+            $jina = Str::slug($kompresa->namba);
+            $jina = $jina !== '' ? $jina : 'kompresa';
+
+            return response()->download($pdfPath, 'cheti-kompresa-'.$jina.'.pdf', [
+                'Content-Type' => 'application/pdf',
+            ])->deleteFileAfterSend(true);
+        } finally {
+            File::delete($htmlPath);
+            File::deleteDirectory($profile);
+
+            if (! $tayari) {
+                File::delete($pdfPath);
+            }
+        }
+    }
+
+    public function thibitisha(string $token)
+    {
+        $kompresa = Kompresa::with('company')
+            ->where('uthibitisho_token', $token)
+            ->first();
+
+        return view('milipuko.kompresa.thibitisha', [
+            'kompresa' => $kompresa,
+            'appName' => SystemSettingService::get('app_name', 'M-ERP'),
+        ]);
     }
 
     public function edit(Kompresa $kompresa)
@@ -145,6 +222,66 @@ class KompresaController extends Controller
         return redirect()
             ->route('milipuko.kompresa.index')
             ->with('success', 'Usajili wa kompresa umefutwa.');
+    }
+
+    private function chetiData(Kompresa $kompresa): array
+    {
+        $kompresa->load('company');
+
+        return [
+            'kompresa' => $kompresa,
+            'qr' => $this->qrDataUri($kompresa->thibitishoUrl()),
+            'pdf' => false,
+            'pichaInline' => null,
+            'logoInline' => null,
+        ];
+    }
+
+    private function qrDataUri(string $url): string
+    {
+        $barcode = new TCPDF2DBarcode($url, 'QRCODE,H');
+        $png = $barcode->getBarcodePngData(5, 5, [0, 0, 0]);
+
+        return 'data:image/png;base64,'.base64_encode($png);
+    }
+
+    private function failiDataUri(?string $path): ?string
+    {
+        if (! $path || ! Storage::disk('public')->exists($path)) {
+            return null;
+        }
+
+        $mime = Storage::disk('public')->mimeType($path) ?: 'image/jpeg';
+
+        return 'data:'.$mime.';base64,'.base64_encode(Storage::disk('public')->get($path));
+    }
+
+    private function logoDataUri(Kompresa $kompresa): ?string
+    {
+        $logo = $kompresa->company?->logo;
+        if (! $logo) {
+            return null;
+        }
+
+        $path = public_path('storage/'.ltrim($logo, '/'));
+        if (! is_file($path)) {
+            return null;
+        }
+
+        $mime = mime_content_type($path) ?: 'image/png';
+
+        return 'data:'.$mime.';base64,'.base64_encode((string) file_get_contents($path));
+    }
+
+    private function chromeBinary(): ?string
+    {
+        foreach (['/usr/bin/google-chrome', '/usr/bin/google-chrome-stable', '/usr/bin/chromium', '/usr/bin/chromium-browser'] as $path) {
+            if (is_executable($path)) {
+                return $path;
+            }
+        }
+
+        return null;
     }
 
     private function formData(): array

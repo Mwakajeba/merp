@@ -250,6 +250,10 @@ Route::prefix('milipuko/maduara')->name('milipuko.maduara.')->middleware(['auth'
     Route::put('/{duara}', [MaduaraController::class, 'update'])->name('update');
     Route::delete('/{duara}', [MaduaraController::class, 'destroy'])->name('destroy');
 });
+Route::get('/thibitisha/kompresa/{token}', [KompresaController::class, 'thibitisha'])
+    ->middleware('throttle:30,1')
+    ->where('token', '[A-Za-z0-9]+')
+    ->name('milipuko.kompresa.thibitisha');
 Route::get('/thibitisha/mlipuaji/{token}', [WalipuajiController::class, 'thibitisha'])
     ->middleware('throttle:30,1')
     ->where('token', '[A-Za-z0-9]+')

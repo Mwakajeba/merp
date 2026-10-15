@@ -16,6 +16,7 @@
             <h6 class="mb-0 text-uppercase">{{ $kompresa->namba }}</h6>
             <div>
                 <a href="{{ route('milipuko.kompresa.cheti', $kompresa) }}" class="btn btn-dark">Chapisha cheti</a>
+                <a href="{{ route('milipuko.kompresa.cheti.pdf', $kompresa) }}" class="btn btn-outline-dark">Pakua PDF</a>
                 <a href="{{ route('milipuko.kompresa.edit', $kompresa) }}" class="btn btn-warning">Hariri</a>
                 <form action="{{ route('milipuko.kompresa.destroy', $kompresa) }}" method="POST" class="d-inline" onsubmit="return confirm('Una uhakika unataka kufuta usajili huu?');">
                     @csrf
