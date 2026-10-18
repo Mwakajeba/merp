@@ -28,5 +28,9 @@
 	<string>MainMenu</string>
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>
+	<key>NSBluetoothAlwaysUsageDescription</key>
+	<string>Bluetooth inatumika kuchapisha risiti kwenye printer ya POS 58mm.</string>
+	<key>NSBluetoothPeripheralUsageDescription</key>
+	<string>Bluetooth inatumika kuunganisha printer ya POS.</string>
 </dict>
 </plist>

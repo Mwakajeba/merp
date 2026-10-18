@@ -5,6 +5,7 @@ import '../auth/login_screen.dart';
 import '../milipuko/kata_kibali_screen.dart';
 import '../milipuko/kata_mawe_screen.dart';
 import '../milipuko/picha_screen.dart';
+import '../milipuko/printer_bluetooth_screen.dart';
 import '../milipuko/scan_screen.dart';
 import '../milipuko/walipuaji_screen.dart';
 
@@ -100,6 +101,14 @@ class _HomeScreenState extends State<HomeScreen> {
         color: const Color(0xFF8E2F4F),
         onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ScanScreen(aina: 'mlipuzi'))),
       ),
+      if (!_verifierOnly)
+        _Kitendo(
+          icon: Icons.bluetooth_rounded,
+          title: 'Printer',
+          subtitle: 'POS 58mm Bluetooth',
+          color: const Color(0xFF155E75),
+          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const PrinterBluetoothScreen())),
+        ),
     ];
 
     return Scaffold(

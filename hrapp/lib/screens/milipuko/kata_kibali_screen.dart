@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../config/api_config.dart';
 import '../../services/milipuko_service.dart';
+import 'printer_bluetooth_screen.dart';
 import 'risiti.dart';
 
 class KataKibaliScreen extends StatefulWidget {
@@ -21,7 +22,7 @@ class _KataKibaliScreenState extends State<KataKibaliScreen> {
 
   String _hali = 'uzalishaji';
   String _aina = 'cotex';
-  String _karatasi = '80';
+  String _karatasi = '58';
   Map<String, dynamic>? _duara;
   Map<String, dynamic>? _msimamizi;
   Map<String, dynamic>? _mlipuzi;
@@ -129,8 +130,8 @@ class _KataKibaliScreenState extends State<KataKibaliScreen> {
     _onyesha((result['message'] ?? 'Imeshindikana.').toString());
     if (result['success'] == true) {
       final kibali = (result['data'] as Map?)?['kibali'];
-      if (kibali is Map) {
-        await chapishaKibaliChaMlipuko(Map<String, dynamic>.from(kibali), _karatasi);
+      if (kibali is Map && mounted) {
+        await chapishaMojaKwaMoja(context, chapisha: () => chapishaKibaliChaMlipuko(Map<String, dynamic>.from(kibali), _karatasi));
       }
       if (mounted) Navigator.pop(context);
     }
@@ -243,6 +244,7 @@ class _KataKibaliScreenState extends State<KataKibaliScreen> {
                     ),
                     const SizedBox(height: 16),
                     const Text('Printer', style: TextStyle(fontWeight: FontWeight.w700)),
+                    const ChaguaPrinterTile(),
                     const SizedBox(height: 8),
                     Row(
                       children: [

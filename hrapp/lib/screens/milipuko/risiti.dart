@@ -1,6 +1,6 @@
-import 'package:pdf/pdf.dart';
-import 'package:pdf/widgets.dart' as pw;
-import 'package:printing/printing.dart';
+import 'package:esc_pos_utils_plus/esc_pos_utils_plus.dart';
+
+import '../../services/bluetooth_printer_service.dart';
 
 Future<void> chapishaRisiti({
   required String karatasi,
@@ -14,98 +14,33 @@ Future<void> chapishaRisiti({
   String anuani = '',
   String ukaguziUrl = '',
 }) async {
-  final upana = (karatasi == '58' ? 58 : 80) * PdfPageFormat.mm;
-  final format = PdfPageFormat(upana, 320 * PdfPageFormat.mm, marginAll: 2.4 * PdfPageFormat.mm);
-  final doc = pw.Document();
-
-  doc.addPage(
-    pw.Page(
-      pageFormat: format,
-      build: (context) {
-        return pw.Column(
-          crossAxisAlignment: pw.CrossAxisAlignment.stretch,
-          children: [
-            pw.Text(
-              'BLASTING OFFICE',
-              textAlign: pw.TextAlign.center,
-              style: pw.TextStyle(fontSize: 8, color: PdfColors.red800, fontWeight: pw.FontWeight.bold),
-            ),
-            pw.Text(
-              kampuni.isEmpty ? 'MSASA GOLD MINE' : kampuni,
-              textAlign: pw.TextAlign.center,
-              style: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold),
-            ),
-            if (anuani.trim().isNotEmpty)
-              pw.Text(anuani, textAlign: pw.TextAlign.center, style: const pw.TextStyle(fontSize: 7)),
-            pw.SizedBox(height: 4),
-            pw.Text(
-              kichwa,
-              textAlign: pw.TextAlign.center,
-              style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold),
-            ),
-            pw.SizedBox(height: 2),
-            pw.Text(
-              'Na. $namba',
-              textAlign: pw.TextAlign.center,
-              style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold),
-            ),
-            pw.SizedBox(height: 6),
-            ...mistari.map(
-              (mstari) => pw.Padding(
-                padding: const pw.EdgeInsets.only(bottom: 2),
-                child: pw.Row(
-                  crossAxisAlignment: pw.CrossAxisAlignment.start,
-                  children: [
-                    pw.SizedBox(width: upana * 0.38, child: pw.Text(mstari.key, style: const pw.TextStyle(fontSize: 8))),
-                    pw.Expanded(
-                      child: pw.Text(mstari.value, style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold)),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            if (majina.isNotEmpty) ...[
-              pw.SizedBox(height: 4),
-              pw.Text(majinaKichwa ?? 'MAJINA', style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold)),
-              ...majina.map((jina) => pw.Text('• $jina', style: const pw.TextStyle(fontSize: 8))),
-            ],
-            ...sahihi.map(
-              (jina) => pw.Padding(
-                padding: const pw.EdgeInsets.only(top: 8),
-                child: pw.Column(
-                  crossAxisAlignment: pw.CrossAxisAlignment.start,
-                  children: [
-                    pw.Text(jina, style: const pw.TextStyle(fontSize: 7)),
-                    pw.SizedBox(height: 10),
-                    pw.Container(width: 90, height: 0.4, color: PdfColors.black),
-                  ],
-                ),
-              ),
-            ),
-            if (ukaguziUrl.isNotEmpty) ...[
-              pw.SizedBox(height: 10),
-              pw.Center(
-                child: pw.BarcodeWidget(
-                  barcode: pw.Barcode.qrCode(),
-                  data: ukaguziUrl,
-                  width: karatasi == '58' ? 62 : 74,
-                  height: karatasi == '58' ? 62 : 74,
-                ),
-              ),
-              pw.SizedBox(height: 2),
-              pw.Text(
-                'SKANI KWA UKAGUZI',
-                textAlign: pw.TextAlign.center,
-                style: pw.TextStyle(fontSize: 7, fontWeight: pw.FontWeight.bold),
-              ),
-            ],
-          ],
-        );
-      },
-    ),
+  final bytes = await _andikaRisiti(
+    karatasi: karatasi,
+    kichwa: kichwa,
+    namba: namba,
+    mistari: mistari,
+    majina: majina,
+    majinaKichwa: majinaKichwa,
+    sahihi: sahihi,
+    kampuni: kampuni,
+    anuani: anuani,
+    ukaguziUrl: ukaguziUrl,
   );
+  await BluetoothPrinterService.chapisha(bytes);
+}
 
-  await Printing.layoutPdf(onLayout: (_) async => doc.save(), name: 'kibali-$namba');
+Future<void> chapishaMajaribio() async {
+  final profile = await CapabilityProfile.load();
+  final generator = Generator(PaperSize.mm58, profile);
+  final bytes = <int>[
+    ...generator.reset(),
+    ...generator.text('BLASTING OFFICE', styles: const PosStyles(align: PosAlign.center, bold: true)),
+    ...generator.text('POS 58mm', styles: const PosStyles(align: PosAlign.center, bold: true, height: PosTextSize.size2, width: PosTextSize.size2)),
+    ...generator.hr(),
+    ...generator.text('Printer iko tayari.', styles: const PosStyles(align: PosAlign.center)),
+    ...generator.feed(3),
+  ];
+  await BluetoothPrinterService.chapisha(bytes);
 }
 
 Future<void> chapishaKibaliChaMlipuko(Map<String, dynamic> kibali, String karatasi) {
@@ -153,4 +88,77 @@ Future<void> chapishaKibaliChaMawe(Map<String, dynamic> mawe, String karatasi) {
     ],
     sahihi: ['KATIBU: ${mawe['katibu'] ?? ''}'],
   );
+}
+
+Future<List<int>> _andikaRisiti({
+  required String karatasi,
+  required String kichwa,
+  required String namba,
+  required List<MapEntry<String, String>> mistari,
+  required List<String> majina,
+  required String? majinaKichwa,
+  required List<String> sahihi,
+  required String kampuni,
+  required String anuani,
+  required String ukaguziUrl,
+}) async {
+  final profile = await CapabilityProfile.load();
+  final upana = karatasi == '80' ? PaperSize.mm80 : PaperSize.mm58;
+  final generator = Generator(upana, profile);
+  final safu = upana == PaperSize.mm80 ? 48 : 32;
+  final bytes = <int>[
+    ...generator.reset(),
+    ...generator.text('BLASTING OFFICE', styles: const PosStyles(align: PosAlign.center, bold: true)),
+    ...generator.text(kampuni.trim().isEmpty ? 'MSASA GOLD MINE' : kampuni.trim(), styles: const PosStyles(align: PosAlign.center, bold: true)),
+  ];
+  if (anuani.trim().isNotEmpty) {
+    bytes.addAll(generator.text(anuani.trim(), styles: const PosStyles(align: PosAlign.center)));
+  }
+  bytes.addAll(generator.hr(ch: '-', len: safu));
+  bytes.addAll(generator.text(kichwa, styles: const PosStyles(align: PosAlign.center, bold: true)));
+  bytes.addAll(generator.text(
+    'Na. $namba',
+    styles: PosStyles(
+      align: PosAlign.center,
+      bold: true,
+      height: namba.length > 12 ? PosTextSize.size1 : PosTextSize.size2,
+      width: namba.length > 12 ? PosTextSize.size1 : PosTextSize.size2,
+    ),
+  ));
+  bytes.addAll(generator.hr(ch: '-', len: safu));
+  for (final mstari in mistari) {
+    bytes.addAll(_mstari(generator, safu, mstari.key, mstari.value));
+  }
+  if (majina.isNotEmpty) {
+    bytes.addAll(generator.feed(1));
+    bytes.addAll(generator.text(majinaKichwa ?? 'MAJINA', styles: const PosStyles(bold: true)));
+    for (final jina in majina) {
+      bytes.addAll(generator.text('- $jina'));
+    }
+  }
+  for (final jina in sahihi) {
+    bytes.addAll(generator.feed(1));
+    bytes.addAll(generator.text(jina));
+    bytes.addAll(generator.text('................'));
+  }
+  if (ukaguziUrl.trim().isNotEmpty) {
+    bytes.addAll(generator.feed(1));
+    bytes.addAll(generator.qrcode(ukaguziUrl.trim(), size: QRSize.size6, align: PosAlign.center));
+    bytes.addAll(generator.text('SKANI KWA UKAGUZI', styles: const PosStyles(align: PosAlign.center, bold: true)));
+  }
+  bytes.addAll(generator.feed(3));
+  return bytes;
+}
+
+List<int> _mstari(Generator generator, int safu, String key, String value) {
+  final kushoto = key.trim();
+  final kulia = value.trim().isEmpty ? '-' : value.trim();
+  if (kushoto.length + kulia.length + 1 <= safu) {
+    final nafasi = safu - kushoto.length - kulia.length;
+    return generator.text('$kushoto${' ' * nafasi}$kulia');
+  }
+  return [
+    ...generator.text(kushoto),
+    ...generator.text(kulia, styles: const PosStyles(bold: true)),
+  ];
 }
