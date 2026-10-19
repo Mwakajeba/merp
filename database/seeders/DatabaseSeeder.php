@@ -20,6 +20,7 @@ class DatabaseSeeder extends Seeder
             // Core company + structure
             CompanySeeder::class,
             BranchSeeder::class,
+            MaduaraSeeder::class,
             RolePermissionSeeder::class,
             PermissionGroupsSeeder::class,
             MenuSeeder::class,
